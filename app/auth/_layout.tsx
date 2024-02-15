@@ -6,20 +6,23 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Colors from '../../src/constants/Colors';
-import AuthRequiredPage from '../auth/AuthRequiredPage';
+import AuthRequiredPage from './AuthRequiredPage';
 import { main_url } from '../../src/constants/Urls';
-import ChannelsScreen from '../../app/(tabs)/channels';
-import Index from '../../app/(tabs)';
-import Profile from '../../app/(tabs)/profile';
-import NotificationScreen from '../../app/(tabs)/notifications';
+import ChannelsScreen from '../(tabs)/channels';
+import Index from '../(tabs)';
+import Profile from '../(tabs)/profile';
+import NotificationScreen from '../(tabs)/notifications';
 
-function TabBarIcon(props) {
+function TabBarIcon(props: {
+  name: React.ComponentProps<typeof FontAwesome>['name'];
+  color: string;
+}) {
   return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
 }
 
 const Tab = createBottomTabNavigator();
 
-export default function TabBottomLayout({ state }) {
+export default function AuthLayout({ state }) {
   const navigation = useNavigation();
   const [isLoggedIn, setLoggedIn] = useState(false);
 
@@ -28,15 +31,16 @@ export default function TabBottomLayout({ state }) {
       const token = await AsyncStorage.getItem('userToken');
       const jsonObject = JSON.parse(token);
       if (token) {
+          console.log(jsonObject.access)
           const response = await axios.get(main_url + '/user/check_login_status/', {
               headers: {
                   'Authorization': 'Bearer ' + jsonObject.access
               }
           });
 
-          
         if (response.data.user) {
           setLoggedIn(true);
+          return navigation.navigate('Messages');
         } else {
           setLoggedIn(false);
         }
@@ -49,27 +53,17 @@ export default function TabBottomLayout({ state }) {
     }
   };
 
+  
   useEffect(() => {
     checkLoginStatus();
   }, [state]);
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      // Refresh the app before returning the AuthRequiredPage
-      refreshApp();
-    }
-  }, [isLoggedIn]);
-
-  const refreshApp = () => {
-    // Reset the root component by changing the key
-    navigation.setParams({ key: Math.random() });
-  };
-
   if (!isLoggedIn) {
-    // If not logged in, return the "Messages" screen instead of AuthRequiredPage
-    return <AuthRequiredPage />;
-    
+    console.log("NNNNNNNNNNNNNNNNNNNNNNNNNN")
+
+    return <AuthRequiredPage  />;
   }
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -79,31 +73,18 @@ export default function TabBottomLayout({ state }) {
       }}
     >
       <Tab.Screen
-        name="Channels"
+        name="Login"
         component={ChannelsScreen}
         options={{
           tabBarIcon: ({ color }) => <FontAwesome name="users" size={24} color={color} />,
         }}
+        
       />
       <Tab.Screen
-        name="Messages"
+        name="Register"
         component={Index}
         options={{
           tabBarIcon: ({ color }) => <FontAwesome name="comment" size={24} color={color} />,
-        }}
-      />
-      <Tab.Screen
-        name="Notification"
-        component={NotificationScreen}
-        options={{
-          tabBarIcon: ({ color }) => <FontAwesome name="bell" size={24} color={color} />,
-        }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={Profile}
-        options={{
-          tabBarIcon: ({ color }) => <FontAwesome name="user" size={24} color={color} />,
         }}
       />
     </Tab.Navigator>

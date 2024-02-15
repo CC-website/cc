@@ -18,6 +18,7 @@ import LinkingConfiguration from "./LinkingConfiguration";
 import SignUpScreen from "../screens/SignUpScreen";
 import { useAuthContext } from "../contexts/AuthContext";
 import DrawerNavigator from "./DrawerNavigator";
+import TabDrawLayout from "./DrawerNavigator";
 
 export default function Navigation({
   colorScheme,
@@ -55,7 +56,7 @@ function RootNavigator() {
         <>
           <Stack.Screen
             name="Root"
-            component={DrawerNavigator}
+            component={TabDrawLayout}
             options={{ headerShown: false }}
           />
           <Stack.Screen

@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { main_url } from '../constants/Urls';
 
 export default function Overview({ visible, onClose, setOverview }) {
   const [channelName, setChannelName] = useState('');
@@ -70,7 +71,7 @@ export default function Overview({ visible, onClose, setOverview }) {
         return;
       }
 
-      const url = `http://192.168.145.37:8000/api/channels/${setOverview.id}/`;
+      const url = ``+main_url+`/api/channels/${setOverview.id}/`;
 
       // Make a PUT request with data in the request body
       const response = await axios.put(url, data);
@@ -105,7 +106,7 @@ export default function Overview({ visible, onClose, setOverview }) {
           text: 'Yes',
           onPress: async () => {
             try {
-              const url = `http://192.168.145.37:8000/api/channels/${setOverview.id}/`;
+              const url = ``+main_url+`/api/channels/${setOverview.id}/`;
 
               // Make a DELETE request
               const response = await axios.delete(url);
@@ -173,7 +174,7 @@ export default function Overview({ visible, onClose, setOverview }) {
                 source={{
                   uri: setOverview?.image_url
                     ? setOverview.image_url
-                    : 'http://192.168.145.37:8000/channel_logos/channel1.png',
+                    : ''+main_url+'/channel_logos/channel1.png',
                 }}
                 style={styles.logo}
               />

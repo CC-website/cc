@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Modal, StyleSheet, Image, ScrollView } fr
 import { Ionicons } from '@expo/vector-icons';
 import EditSubChannel from './editSubChannel';
 import EditGroup from './editGroup';
+import { main_url } from '../constants/Urls';
 
 export default function EditChannels({ visible, onClose, setOverview }) {
   const [expandedSubchannels, setExpandedSubchannels] = useState([]);
@@ -88,7 +89,7 @@ export default function EditChannels({ visible, onClose, setOverview }) {
                             <View key={group.id} style={[styles.groupChannelItem, { backgroundColor: '#202020' }]}>
                             <Image
                               source={{
-                                uri: group.image_url ? group.image_url : 'http://192.168.145.37:8000/group_logos/group.png',
+                                uri: group.image_url ? group.image_url : ''+main_url+'/group_logos/group.png',
                               }}
                               style={[styles.logoImage, { borderRadius: 10, height: 35 }]}
                             />

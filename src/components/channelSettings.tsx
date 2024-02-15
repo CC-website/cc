@@ -4,6 +4,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { Entypo, MaterialCommunityIcons, FontAwesome6 } from '@expo/vector-icons';
 import Overview from './overview';
 import EditChannels from './editChannel';
+import { main_url } from '../constants/Urls';
 
 export default function ChannelSettings({ visible, onClose, selectedChannel }) {
 
@@ -58,7 +59,7 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
                     source={{
                     uri: selectedChannel?.image_url
                         ? selectedChannel.image_url
-                        : "http://192.168.145.37:8000/channel_logos/channel1.png",
+                        : ""+main_url+"/channel_logos/channel1.png",
                     }}
                     style={styles.logo}
                 />

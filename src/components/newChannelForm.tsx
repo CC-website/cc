@@ -5,6 +5,7 @@ import axios from 'axios';
 import ImgToBase64 from 'react-native-image-base64';
 import Icon from 'react-native-vector-icons/FontAwesome'; 
 import { Ionicons } from '@expo/vector-icons';
+import { main_url } from '../constants/Urls';
 
 export default function NewChannelForm({ visible, onClose, onCreateChannel }) {
   const [channelName, setChannelName] = useState('');
@@ -60,7 +61,7 @@ export default function NewChannelForm({ visible, onClose, onCreateChannel }) {
       try {
         console.log("Nigel: " + image);
         const imageBase64 = await encodeImageToBase64();
-        const url = 'http://192.168.145.37:8000/api/channels/create/';
+        const url = main_url+'/api/channels/create/';
 
         // Make a POST request with data in the request body
         const response = await axios.post(url, {

@@ -13,6 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import Icon from 'react-native-vector-icons/FontAwesome'; 
 import { Ionicons } from '@expo/vector-icons';
+import { main_url } from '../constants/Urls';
 
 export default function NewGroupForm({
   visible,
@@ -83,7 +84,7 @@ export default function NewGroupForm({
           }
         }
 
-        const url = 'http://192.168.145.37:8000/api/groups/';
+        const url = ''+main_url+'/api/groups/';
 
         // Make a POST request with data in the request body
         const response = await axios.post(url, {

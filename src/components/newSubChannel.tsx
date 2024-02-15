@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView,
 import axios from 'axios';
 import Icon from 'react-native-vector-icons/FontAwesome'; 
 import { Ionicons } from '@expo/vector-icons';
+import { main_url } from '../constants/Urls';
 
 export default function NewSubChannelForm({ visible, onClose, onCreateChannel, selectedChannel }) {
   const [channelName, setChannelName] = useState('');
@@ -11,7 +12,7 @@ export default function NewSubChannelForm({ visible, onClose, onCreateChannel, s
   const handleCreateChannel = async () => {
     if (channelName.trim() !== '' && channelDescription.trim() !== '') {
       try {
-        const url = 'http://192.168.145.37:8000/api/subchannels/';
+        const url = ''+main_url+'/api/subchannels/';
 
         // Make a POST request with data in the request body
         const response = await axios.post(url, {
@@ -71,7 +72,7 @@ export default function NewSubChannelForm({ visible, onClose, onCreateChannel, s
                 source={{
                   uri: selectedChannel?.image_url
                     ? selectedChannel.image_url
-                    : "http://192.168.145.37:8000/channel_logos/channel1.png",
+                    : ""+main_url+"/channel_logos/channel1.png",
                 }}
                 style={styles.logo}
               />

@@ -8,6 +8,7 @@ import {
   ScrollView,
   Switch,
 } from 'react-native';
+import { main_url } from '../constants/Urls';
 import Icon from 'react-native-vector-icons/FontAwesome'; // You can replace FontAwesome with your preferred icon library
 import { Image } from 'react-native';
 import NewSubChannelForm from './newSubChannel';
@@ -85,7 +86,7 @@ export default function EmptyModal({ visible, onClose, channelInfo }) {
             <View style={{ marginTop: 0 }}>
               {/* Channel Logo */}
               <TouchableOpacity style={styles.logo}>
-                <Image source={{ uri: image_url ? image_url : "http://192.168.145.37:8000/channel_logos/channel1.png", }} style={styles.channelLogo} />
+                <Image source={{ uri: image_url ? image_url : ""+main_url+"/channel_logos/channel1.png", }} style={styles.channelLogo} />
               </TouchableOpacity>
 
               {/* Channel Name and Members */}

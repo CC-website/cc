@@ -8,8 +8,9 @@ import NewSubChannelForm from '../../src/components/newSubChannel';
 import NewGroupForm from '../../src/components/NewGroup';
 import Settings from '../../src/components/settings';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { main_url } from '../../src/constants/Urls';
 
-export default function TabOneScreen() {
+export default function ChannelsScreen() {
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [selectedSubChannel, setSelectedSubChannel] = useState(null);
@@ -19,7 +20,7 @@ export default function TabOneScreen() {
 
   useEffect(() => {
     // Fetch channels data from Django API
-    axios.get('http://192.168.145.37:8000/api/channels/')
+    axios.get(main_url + '/api/channels/')
       .then(response => {
         console.log('Channels data:', response.data); // Log the data
         setChannels(response.data);

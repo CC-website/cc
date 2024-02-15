@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, Image } fro
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import ImgToBase64 from 'react-native-image-base64';
+import { main_url } from '../constants/Urls';
 
 export default function NewSubChannelForm({ visible, onClose, onCreateChannel, selectedChannel }) {
   const [channelName, setChannelName] = useState('');
@@ -56,7 +57,7 @@ export default function NewSubChannelForm({ visible, onClose, onCreateChannel, s
       try {
         console.log("Nigel: " + image);
         const imageBase64 = image ? await encodeImageToBase64() : '';
-        const url = 'http://192.168.145.37:8000/api/subchannels/';
+        const url = ''+main_url+'/api/subchannels/';
 
         // Check if the imageBase64 string is in the expected format
         if (imageBase64.includes(';base64,')) {
