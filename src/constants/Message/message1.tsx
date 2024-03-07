@@ -1,9 +1,16 @@
-// message1.js
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export const SuccessMessage = ({ message, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose(); // Close the message after 5 seconds
+    }, 2000);
+
+    return () => clearTimeout(timer); // Cleanup the timer on unmount
+  }, []); // Run this effect only once after mounting
+
   return (
     <View style={styles.container1}>
       <Text style={styles.text}>{message}</Text>
@@ -48,6 +55,7 @@ const styles = StyleSheet.create({
     color: 'black',
   },
   closeButton: {
-    marginTop: -25,
+    marginTop: -20,
+    marginRight: -10,
   },
 });

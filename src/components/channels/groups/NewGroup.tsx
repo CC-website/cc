@@ -13,7 +13,8 @@ import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import Icon from 'react-native-vector-icons/FontAwesome'; 
 import { Ionicons } from '@expo/vector-icons';
-import { main_url } from '../constants/Urls';
+import { main_url } from '../../../constants/Urls';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function NewGroupForm({
   visible,
@@ -67,51 +68,99 @@ export default function NewGroupForm({
     }
   };
 
+  // const handleCreateChannel = async () => {
+  //   if (channelName.trim() !== '' && channelDescription.trim() !== '') {
+  //     try {
+  //       let imageBase64 = '';
+
+  //       if (image) {
+  //         imageBase64 = await encodeImageToBase64();
+
+  //         // Check if the imageBase64 string is in the expected format
+  //         if (!imageBase64.includes(';base64,')) {
+  //           // Handle the case where the imageBase64 string is not in the expected format
+  //           console.error('Invalid imageBase64 format');
+  //           alert('Error creating group. Please try again.');
+  //           return;
+  //         }
+  //       }
+
+  //       const url = ''+main_url+'/api/groups/';
+
+  //       // Make a POST request with data in the request body
+  //       const response = await axios.post(url, {
+  //         subchannel: selectedSubChannel?.id || '',
+  //         name: channelName,
+  //         description: channelDescription,
+  //         image: imageBase64,
+  //       });
+
+  //       // Handle the response as needed
+  //       console.log(response.data);
+  //       alert('Group created successfully!');
+  //     } catch (error) {
+  //       // Handle error
+  //       console.error(error);
+  //       alert('Error creating group. Please try again.');
+  //     }
+
+  //     // Reset form fields and close the modal
+  //     setChannelName('');
+  //     setChannelLogo(null);
+  //     setChannelDescription('');
+  //     setImage(null);
+  //     setSelectedSubChannel(null);
+  //     onClose();
+  //   }
+  // };
+
+
   const handleCreateChannel = async () => {
     if (channelName.trim() !== '' && channelDescription.trim() !== '') {
-      try {
-        let imageBase64 = '';
+        try {
+            console.log("Nigel: " + image);
+            const imageBase64 = await encodeImageToBase64();
+            const url = ''+main_url+'/api/groups/';
+            const token = await AsyncStorage.getItem('userToken');
+            const jsonObject = JSON.parse(token);
 
-        if (image) {
-          imageBase64 = await encodeImageToBase64();
+            // Create FormData object to send data including image
+            const formData = new FormData();
+            formData.append('subchannel', selectedSubChannel?.id || '');
+            formData.append('name', channelName);
+            formData.append('description', channelDescription);
+            formData.append('image', imageBase64);
 
-          // Check if the imageBase64 string is in the expected format
-          if (!imageBase64.includes(';base64,')) {
-            // Handle the case where the imageBase64 string is not in the expected format
-            console.error('Invalid imageBase64 format');
-            alert('Error creating group. Please try again.');
-            return;
-          }
+            // Make a POST request with FormData and appropriate headers
+            if (token) {
+                const response = await axios.post(url, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        'Authorization': 'Bearer ' + jsonObject.access
+                    }
+                });
+                
+                // Handle the response as needed
+                console.log(response.data);
+                alert('Group created successfully!');
+            } else {
+                console.error('No token found');
+            }
+        } catch (error) {
+            // Handle error
+            console.error(error);
+            alert('Error creating channel. Please try again.');
         }
 
-        const url = ''+main_url+'/api/groups/';
-
-        // Make a POST request with data in the request body
-        const response = await axios.post(url, {
-          subchannel: selectedSubChannel?.id || '',
-          name: channelName,
-          description: channelDescription,
-          image: imageBase64,
-        });
-
-        // Handle the response as needed
-        console.log(response.data);
-        alert('Group created successfully!');
-      } catch (error) {
-        // Handle error
-        console.error(error);
-        alert('Error creating group. Please try again.');
-      }
-
-      // Reset form fields and close the modal
-      setChannelName('');
-      setChannelLogo(null);
-      setChannelDescription('');
-      setImage(null);
-      setSelectedSubChannel(null);
-      onClose();
+        // Reset form fields and close the modal
+        setChannelName('');
+        setChannelLogo(null);
+        setChannelDescription('');
+        setImage(null);
+        onClose();
     }
-  };
+};
+  
 
   // Subchannel Selection Modal
   const SubchannelSelectionModal = ({ visible, onClose, subchannels, onSelectSubchannel }) => {

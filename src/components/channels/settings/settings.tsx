@@ -8,11 +8,11 @@ import {
   ScrollView,
   Switch,
 } from 'react-native';
-import { main_url } from '../constants/Urls';
+import { main_url } from '../../../constants/Urls';
 import Icon from 'react-native-vector-icons/FontAwesome'; // You can replace FontAwesome with your preferred icon library
 import { Image } from 'react-native';
-import NewSubChannelForm from './newSubChannel';
-import NewGroupForm from './NewGroup';
+import NewSubChannelForm from '../subchannels/newSubChannel';
+import NewGroupForm from '../groups/NewGroup';
 import ChannelSettings from './channelSettings';
 
 export default function EmptyModal({ visible, onClose, channelInfo }) {

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, Image, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import EditSubChannel from './editSubChannel';
-import EditGroup from './editGroup';
-import { main_url } from '../constants/Urls';
+import EditSubChannel from '../subchannels/editSubChannel';
+import EditGroup from '../groups/editGroup';
+import { main_url } from '../../../constants/Urls';
 
 export default function EditChannels({ visible, onClose, setOverview }) {
   const [expandedSubchannels, setExpandedSubchannels] = useState([]);
