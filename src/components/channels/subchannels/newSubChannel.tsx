@@ -3,40 +3,59 @@ import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView,
 import axios from 'axios';
 import Icon from 'react-native-vector-icons/FontAwesome'; 
 import { Ionicons } from '@expo/vector-icons';
-import { main_url } from '../constants/Urls';
+import { main_url } from '../../../constants/Urls';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function NewSubChannelForm({ visible, onClose, onCreateChannel, selectedChannel }) {
   const [channelName, setChannelName] = useState('');
   const [channelDescription, setChannelDescription] = useState('');
 
+
+
   const handleCreateChannel = async () => {
     if (channelName.trim() !== '' && channelDescription.trim() !== '') {
-      try {
-        const url = ''+main_url+'/api/subchannels/';
+        try {
+            const url = ''+main_url+'/api/subchannels/';
+            // const url = main_url+'/api/channels/create/';
+            const token = await AsyncStorage.getItem('userToken');
+            const jsonObject = JSON.parse(token);
 
-        // Make a POST request with data in the request body
-        const response = await axios.post(url, {
-          channel_id: selectedChannel.id,
-          channel_name: selectedChannel.name,
-          name: channelName,
-          description: channelDescription,
-        });
+            // Create FormData object to send data including image
+            const formData = new FormData();
+            formData.append('name', channelName);
+            formData.append('description', channelDescription);
+            formData.append('channel_id', selectedChannel.id);
+            formData.append('channel_name', selectedChannel.name);
 
-        // Handle the response as needed
-        console.log(response.data);
-        alert('Channel created successfully!');
-      } catch (error) {
-        // Handle error
-        console.error(error);
-        alert('Error creating channel. Please try again.');
-      }
+            // Make a POST request with FormData and appropriate headers
+            if (token) {
+                const response = await axios.post(url, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        'Authorization': 'Bearer ' + jsonObject.access
+                    }
+                });
+                
+                // Handle the response as needed
+                console.log(response.data);
+                alert('Sub Channel created successfully!');
+            } else {
+                console.error('No token found');
+            }
+        } catch (error) {
+            // Handle error
+            console.error(error);
+            alert('Error creating channel. Please try again.');
+        }
 
-      // Reset form fields and close the modal
-      setChannelName('');
-      setChannelDescription('');
-      onClose();
+        // Reset form fields and close the modal
+        setChannelName('');
+        // setChannelLogo(null);
+        setChannelDescription('');
+        // setImage(null);
+        onClose();
     }
-  };
+};
 
   return (
     <Modal transparent visible={visible} animationType="slide">
@@ -195,3 +214,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+function encodeImageToBase64() {
+  throw new Error('Function not implemented.');
+}
+

@@ -5,7 +5,8 @@ import axios from 'axios';
 import ImgToBase64 from 'react-native-image-base64';
 import Icon from 'react-native-vector-icons/FontAwesome'; 
 import { Ionicons } from '@expo/vector-icons';
-import { main_url } from '../constants/Urls';
+import { main_url } from '../../../constants/Urls';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function NewChannelForm({ visible, onClose, onCreateChannel }) {
   const [channelName, setChannelName] = useState('');
@@ -58,35 +59,49 @@ export default function NewChannelForm({ visible, onClose, onCreateChannel }) {
 
   const handleCreateChannel = async () => {
     if (channelName.trim() !== '' && channelDescription.trim() !== '') {
-      try {
-        console.log("Nigel: " + image);
-        const imageBase64 = await encodeImageToBase64();
-        const url = main_url+'/api/channels/create/';
+        try {
+            console.log("Nigel: " + image);
+            const imageBase64 = await encodeImageToBase64();
+            const url = main_url+'/api/channels/create/';
+            const token = await AsyncStorage.getItem('userToken');
+            const jsonObject = JSON.parse(token);
 
-        // Make a POST request with data in the request body
-        const response = await axios.post(url, {
-          name: channelName,
-          description: channelDescription,
-          image: imageBase64, // The imageBase64 string can be an empty string if no image is selected
-        });
+            // Create FormData object to send data including image
+            const formData = new FormData();
+            formData.append('name', channelName);
+            formData.append('description', channelDescription);
+            formData.append('image', imageBase64);
 
-        // Handle the response as needed
-        console.log(response.data);
-        alert('Channel created successfully!');
-      } catch (error) {
-        // Handle error
-        console.error(error);
-        alert('Error creating channel. Please try again.');
-      }
+            // Make a POST request with FormData and appropriate headers
+            if (token) {
+                const response = await axios.post(url, formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        'Authorization': 'Bearer ' + jsonObject.access
+                    }
+                });
+                
+                // Handle the response as needed
+                console.log(response.data);
+                alert('Channel created successfully!');
+            } else {
+                console.error('No token found');
+            }
+        } catch (error) {
+            // Handle error
+            console.error(error);
+            alert('Error creating channel. Please try again.');
+        }
 
-      // Reset form fields and close the modal
-      setChannelName('');
-      setChannelLogo(null);
-      setChannelDescription('');
-      setImage(null);
-      onClose();
+        // Reset form fields and close the modal
+        setChannelName('');
+        setChannelLogo(null);
+        setChannelDescription('');
+        setImage(null);
+        onClose();
     }
-  };
+};
+
 
   return (
     <Modal transparent visible={visible} animationType="slide">

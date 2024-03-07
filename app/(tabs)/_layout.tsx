@@ -12,10 +12,16 @@ import ChannelsScreen from '../../app/(tabs)/channels';
 import Index from '../../app/(tabs)';
 import Profile from '../../app/(tabs)/profile';
 import NotificationScreen from '../../app/(tabs)/notifications';
+import { ThemeProvider } from '../../src/constants/ThemeContext';
+import { useTheme } from '../../src/constants/ThemeContext';
+
+
 
 function TabBarIcon(props) {
   return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
 }
+
+
 
 const Tab = createBottomTabNavigator();
 
@@ -23,6 +29,7 @@ export default function TabBottomLayout({ state }) {
   const navigation = useNavigation();
   const [isLoggedIn, setLoggedIn] = useState(false);
 
+  
   const checkLoginStatus = async () => {
     try {
       const token = await AsyncStorage.getItem('userToken');
@@ -68,21 +75,31 @@ export default function TabBottomLayout({ state }) {
   if (!isLoggedIn) {
     // If not logged in, return the "Messages" screen instead of AuthRequiredPage
     return <AuthRequiredPage />;
-    
   }
+   useTheme();
+
+console.log('NIgel==========================',useTheme())
+
   return (
+    <ThemeProvider>
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: Colors.light.tint, // Replace with your actual color
+        tabBarActiveTintColor: 'royalblue', // Replace with your actual color
         tabBarInactiveTintColor: Colors.light.tabIconDefault, // Replace with your actual color
-        tabBarStyle: [{ display: 'flex' }, null],
+        tabBarStyle: [{
+          display: 'flex',
+          backgroundColor: "darck",
+          borderWidth: 0, // Set border width to 0
+        }, null],
       }}
     >
+
       <Tab.Screen
         name="Channels"
         component={ChannelsScreen}
         options={{
           tabBarIcon: ({ color }) => <FontAwesome name="users" size={24} color={color} />,
+          headerShown: false, // Hide the top bar for the Channels screen
         }}
       />
       <Tab.Screen
@@ -107,5 +124,7 @@ export default function TabBottomLayout({ state }) {
         }}
       />
     </Tab.Navigator>
+  </ThemeProvider>
+    
   );
 }

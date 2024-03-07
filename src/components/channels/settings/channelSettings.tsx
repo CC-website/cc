@@ -4,7 +4,10 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { Entypo, MaterialCommunityIcons, FontAwesome6 } from '@expo/vector-icons';
 import Overview from './overview';
 import EditChannels from './editChannel';
-import { main_url } from '../constants/Urls';
+import { main_url } from '../../../constants/Urls';
+import Members from '../members/members';
+import Roles from '../roles/roles';
+import BanedMembers from '../bans/bans';
 
 export default function ChannelSettings({ visible, onClose, selectedChannel }) {
 
@@ -12,9 +15,23 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
     const [buttonOpacity, setButtonOpacity] = useState(1);
     const [isModalVisibleOverview, setModalVisibleOverview] = useState(false);
     const [openEditChannelsModel, setOpenEditChannelsModel] = useState(false);
+    const [openMembersModal, setOpenMembersModal] = useState(false);
+    const [openRoles, setOpenRoles] = useState(false);
+    const [openBans, setOpenBans] = useState(false);
 
 
-
+    const handelOpenRoles = () =>{
+      setOpenRoles(true);
+    }
+    const handelCloseRoles = () =>{
+      setOpenRoles(false);
+    }
+    const handelOpenBans = () =>{
+      setOpenBans(true);
+    }
+    const handelCloseBans = () =>{
+      setOpenBans(false);
+    }
     const handleChannelOverview = () =>{
         setModalVisibleOverview(true);
       }
@@ -29,6 +46,13 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
 
     const closeEditChannelModel = () => {
       setOpenEditChannelsModel(false);
+    }
+
+    const closeMembersModal = () => {
+      setOpenMembersModal(false);
+    }
+    const membersModal = () => {
+      setOpenMembersModal(true);
     }
 
     const handleCreateChannelModel = (channelName) => {
@@ -189,7 +213,7 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
                 {/* Channel Profile */}
                 <TouchableOpacity
                 style={{ ...styles.createButton, opacity: buttonOpacity }}
-                onPress={() => console.log('Channel Profile pressed')}
+                onPress={membersModal}
                 >
                     <View style={styles.settingsBox}>
                         <TouchableOpacity style={styles.createSubButton}>
@@ -203,7 +227,7 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
                 
                 <TouchableOpacity
                 style={{ ...styles.createButton1, opacity: buttonOpacity }}
-                onPress={() => console.log('Report Raid pressed')}
+                onPress={handelOpenRoles}
                 >
                     <View style={styles.settingsBox}>
                         <TouchableOpacity style={styles.createSubButton}>
@@ -231,7 +255,7 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
                 {/* Security Action */}
                 <TouchableOpacity
                 style={{ ...styles.createButton2, opacity: buttonOpacity, marginBottom: 40 }}
-                onPress={() => console.log('Security Action pressed')}
+                onPress={handelOpenBans}
                 >
                     <View style={styles.settingsBox}>
                         <TouchableOpacity style={styles.createSubButton}>
@@ -258,8 +282,23 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
       onClose={closeEditChannelModel}
       onCreateChannel={editChannels}
       setOverview={selectedChannel}
-      > 
-      </EditChannels>
+      /> 
+      <Members
+      visible={openMembersModal}
+      onClose={closeMembersModal}
+      onCreateChannel={membersModal}
+      setOverview={selectedChannel}
+      /> 
+
+      <Roles
+      visible={openRoles}
+      onClose={handelCloseRoles}
+      setOverview={selectedChannel}
+      /> 
+      <BanedMembers
+          visible={openBans}
+          onClose={handelCloseBans}
+          setOverview={selectedChannel} onCreateChannel={undefined}      /> 
       </View>
       
     </Modal>

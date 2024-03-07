@@ -4,7 +4,8 @@ import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { main_url } from '../constants/Urls';
+import { main_url } from '../../../constants/Urls';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Overview({ visible, onClose, setOverview }) {
   const [channelName, setChannelName] = useState('');
@@ -54,35 +55,54 @@ export default function Overview({ visible, onClose, setOverview }) {
 
   const handleUpdateChannel = async () => {
     try {
-      // Create a data object with only the fields that have changed
-      const data = {};
-      if (channelName.trim() !== '') data.name = channelName;
-      if (channelDescription.trim() !== '') data.description = channelDescription;
+        // Create a data object with only the fields that have changed
+        const data = {};
+        if (channelName.trim() !== '') data.name = channelName;
+        if (channelDescription.trim() !== '') data.description = channelDescription;
 
-      // Check if the image has changed
-      if (image !== null) {
-        const imageBase64 = await encodeImageToBase64();
-        data.image = imageBase64;
-      }
+        // Check if the image has changed
+        if (image !== null) {
+            // No need to re-encode the image, you can directly use the data.image here
+            data.image = await encodeImageToBase64();
+        }
 
-      if (Object.keys(data).length === 0) {
-        // No changes, inform the user or handle as needed
-        Alert.alert('No Changes', 'No changes to update.');
-        return;
-      }
+        if (Object.keys(data).length === 0) {
+            // No changes, inform the user or handle as needed
+            Alert.alert('No Changes', 'No changes to update.');
+            return;
+        }
 
-      const url = ``+main_url+`/api/channels/${setOverview.id}/`;
+        const url = `${main_url}/api/channels/${setOverview.id}/`;
+        const token = await AsyncStorage.getItem('userToken');
+        const jsonObject = JSON.parse(token);
 
-      // Make a PUT request with data in the request body
-      const response = await axios.put(url, data);
+        // Create FormData object to send data including image
+        const formData = new FormData();
+        formData.append('name', data.name);
+        formData.append('description', data.description);
+        if (image !== null) {
+            formData.append('image', data.image);
+        }
 
-      // Handle the response as needed
-      console.log(response.data);
-      Alert.alert('Channel Updated', 'Channel updated successfully!');
+        // Make a PUT request with FormData and appropriate headers
+        if (token) {
+            const response = await axios.put(url, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'Authorization': 'Bearer ' + jsonObject.access
+                }
+            });
+
+            // Handle the response as needed
+            console.log("Response data:", response.data);
+            Alert.alert('Channel Updated', 'Channel updated successfully!');
+        } else {
+            console.error('No token found');
+        }
     } catch (error) {
-      // Handle error
-      console.error('Error updating channel:', error);
-      Alert.alert('Error Updating Channel', 'Error updating channel. Please try again.');
+        // Handle error
+        console.error('Error updating channel:', error);
+        Alert.alert('Error Updating Channel', 'Error updating channel. Please try again.');
     }
 
     // Reset form fields and close the modal
@@ -90,44 +110,56 @@ export default function Overview({ visible, onClose, setOverview }) {
     setChannelDescription('');
     setImage(null);
     onClose();
-  };
+};
 
-  const handleDeleteChannel = () => {
-    // Display a confirmation pop-up
-    Alert.alert(
-      'Confirm Deletion',
-      'Are you sure you want to delete this channel?',
-      [
-        {
-          text: 'No',
-          style: 'cancel',
-        },
-        {
-          text: 'Yes',
-          onPress: async () => {
-            try {
-              const url = ``+main_url+`/api/channels/${setOverview.id}/`;
 
-              // Make a DELETE request
-              const response = await axios.delete(url);
+const handleDeleteChannel = async () => {
+  // Display a confirmation pop-up
+  Alert.alert(
+    'Confirm Deletion',
+    'Are you sure you want to delete this channel?',
+    [
+      {
+        text: 'No',
+        style: 'cancel',
+      },
+      {
+        text: 'Yes',
+        onPress: async () => {
+          try {
+            const url = `${main_url}/api/channels/${setOverview.id}/`;
+            const token = await AsyncStorage.getItem('userToken');
+            const jsonObject = JSON.parse(token);
+
+            // Make a DELETE request
+            if (token) {
+              const response = await axios.delete(url, {
+                headers: {
+                  'Authorization': 'Bearer ' + jsonObject.access
+                }
+              });
 
               // Handle the response as needed
-              console.log(response.data);
+              console.log("Response data:", response.data);
               Alert.alert('Channel Deleted', 'Channel deleted successfully!');
-            } catch (error) {
-              // Handle error
-              console.error('Error deleting channel:', error);
-              Alert.alert('Error Deleting Channel', 'Error deleting channel. Please try again.');
+            } else {
+              console.error('No token found');
             }
+          } catch (error) {
+            // Handle error
+            console.error('Error deleting channel:', error);
+            Alert.alert('Error Deleting Channel', 'Error deleting channel. Please try again.');
+          }
 
-            // Close the modal after deletion
-            onClose();
-          },
+          // Close the modal after deletion
+          onClose();
         },
-      ],
-      { cancelable: true }
-    );
-  };
+      },
+    ],
+    { cancelable: true }
+  );
+};
+
 
   return (
     <Modal transparent visible={visible} animationType="slide">
