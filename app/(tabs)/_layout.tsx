@@ -107,6 +107,7 @@ console.log('NIgel==========================',useTheme())
         component={Index}
         options={{
           tabBarIcon: ({ color }) => <FontAwesome name="comment" size={24} color={color} />,
+          headerShown: false,
         }}
       />
       <Tab.Screen
@@ -121,6 +122,7 @@ console.log('NIgel==========================',useTheme())
         component={Profile}
         options={{
           tabBarIcon: ({ color }) => <FontAwesome name="user" size={24} color={color} />,
+          headerShown: false,
         }}
       />
     </Tab.Navigator>

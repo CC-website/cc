@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { StyleSheet } from 'react-native';
-import { ThemeContext } from '../../src/constants/ThemeContext';
-import Colors from './Colors';
+import { ThemeContext } from '../../ThemeContext';
+import Colors from '../../Colors';
 
 export default function Styles() {
   const theme = useContext(ThemeContext);

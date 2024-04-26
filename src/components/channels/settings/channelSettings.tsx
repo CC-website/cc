@@ -8,6 +8,7 @@ import { main_url } from '../../../constants/Urls';
 import Members from '../members/members';
 import Roles from '../roles/roles';
 import BanedMembers from '../bans/bans';
+import Security from './security';
 
 export default function ChannelSettings({ visible, onClose, selectedChannel }) {
 
@@ -18,8 +19,14 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
     const [openMembersModal, setOpenMembersModal] = useState(false);
     const [openRoles, setOpenRoles] = useState(false);
     const [openBans, setOpenBans] = useState(false);
+    const [openSecurity, setOpenSecurity] = useState(false);
 
-
+    const handelOpenSecurity = () =>{
+      setOpenSecurity(true)
+    }
+    const handelColseSecurity = () =>{
+      setOpenSecurity(false)
+    }
     const handelOpenRoles = () =>{
       setOpenRoles(true);
     }
@@ -169,7 +176,7 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
                 {/* Security Action */}
                 <TouchableOpacity
                 style={{ ...styles.createButton2, opacity: buttonOpacity, marginBottom: 40 }}
-                onPress={() => console.log('Security Action pressed')}
+                onPress={handelOpenSecurity}
                 >
                     <View style={styles.settingsBox}>
                         <TouchableOpacity style={styles.createSubButton}>
@@ -295,6 +302,12 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
       onClose={handelCloseRoles}
       setOverview={selectedChannel}
       /> 
+
+      <Security
+      visible={openSecurity}
+      onClose={handelColseSecurity}
+      setOverview={selectedChannel}
+      />
       <BanedMembers
           visible={openBans}
           onClose={handelCloseBans}

@@ -13,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import AddUsers from '../../src/components/users/AddUsers';
 import { useTheme } from '../../src/constants/ThemeContext';
 import Colors from '../../src/constants/Colors';
-import Styles from '../../src/constants/styles';
+import Styles from '../../src/constants/Styles/channel';
 
 
 
