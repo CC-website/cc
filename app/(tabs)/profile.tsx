@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Button, Alert, TouchableOpacity, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -19,6 +19,8 @@ import Language from '../../src/components/profile/language';
 import Privacy from '../../src/components/profile/privacy';
 import Storage from '../../src/components/profile/storage';
 import EditProfile from '../../src/components/profile';
+import CryptoJS from 'crypto-js';
+import NetInfo from '@react-native-community/netinfo';
 
 export default function Profile() {
 
@@ -34,6 +36,8 @@ export default function Profile() {
     help: false,
     invite: false,
   });
+  const [userData, setUserData] = useState(null);
+  const [isConnected, setIsConnected] = useState(true);
 
   const openEditProfile = () =>{
     setProfile(true);
@@ -85,6 +89,68 @@ export default function Profile() {
       Alert.alert('Error', 'An error occurred while logging out. Please try again.');
     }
   };
+
+  
+
+
+  const saveUserData = async (userData) => {
+    try {
+      // Convert userData object to a string before saving
+      const userDataString = JSON.stringify(userData);
+      
+      await AsyncStorage.setItem('UserData', userDataString);
+    } catch (error) {
+      console.error('Error saving user data:', error);
+    }
+  };
+  
+  const fetchUserData = async () => {
+    const token = await AsyncStorage.getItem('userToken');
+    if (token) {
+      const jsonObject = JSON.parse(token);
+      
+      try {
+        const response = await fetch(main_url + '/user/user-info/', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${jsonObject.access}`
+          }
+        });
+  
+        if (response.ok) {
+          const userData = await response.json();
+          
+          // Save userData object locally (after converting to string)
+          await saveUserData(userData);
+          // setUserData(userData);
+          
+        } else {
+          console.error('Failed to fetch user data');
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    }
+  };
+  
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsConnected(state.isConnected);
+    });
+
+    return () => {
+      unsubscribe(); // Unsubscribe when the component unmounts
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isConnected) {
+      const interval = setInterval(fetchUserData, 60000); // Fetch data every minute (adjust as needed)
+      return () => clearInterval(interval); // Clear interval on component unmount
+    }
+  }, [isConnected]);
+  
+
 
 
   const renderModal = (modalKey) => {

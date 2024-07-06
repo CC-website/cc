@@ -1,0 +1,64 @@
+{
+  "general": {
+    "app_name": "MyMessagingApp",
+    "ok": "OK",
+    "cancel": "Cancel",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "messages": {
+    "title": "Messages",
+    "new_message": "New Message",
+    "send": "Send",
+    "reply": "Reply",
+    "forward": "Forward",
+    "delete": "Delete",
+    "empty_message": "No messages yet."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "mark_all_as_read": "Mark all as read",
+    "empty_notifications": "No notifications."
+  },
+  "profile": {
+    "title": "Profile",
+    "edit_profile": "Edit Profile",
+    "logout": "Logout",
+    "settings": "Settings",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "update_profile": "Update Profile"
+  },
+  "channels": {
+    "title": "Channels",
+    "create_channel": "Create Channel",
+    "join_channel": "Join Channel",
+    "channel_name": "Channel Name",
+    "description": "Description",
+    "members": "Members",
+    "leave_channel": "Leave Channel",
+    "empty_channels": "No channels available."
+  },
+  "community": {
+    "title": "Community",
+    "new_post": "New Post",
+    "like": "Like",
+    "comment": "Comment",
+    "share": "Share",
+    "empty_community": "No community posts."
+  },
+  "broadcast": {
+    "title": "Broadcast",
+    "new_broadcast": "New Broadcast",
+    "send_broadcast": "Send Broadcast",
+    "broadcast_message": "Broadcast Message",
+    "empty_broadcast": "No broadcasts."
+  },
+  "errors": {
+    "network_error": "Network error. Please try again.",
+    "something_went_wrong": "Something went wrong. Please try again."
+  }
+}
+
+  

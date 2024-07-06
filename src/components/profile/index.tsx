@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, TextInput, Switch, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, TextInput, Image } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
-import { main_url } from '../../../constants/Urls';
-import SetPermissions from '../members/setPermissions';
+import { main_url } from '../../../src/constants/Urls';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Styles from '../../constants/Styles/profile/editProfile';
-
-// Initialize styles outside of the component
-
-
 
 export default function EditProfile({ visible, onClose }) {
   const styles = Styles();
@@ -18,17 +15,108 @@ export default function EditProfile({ visible, onClose }) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [profilePicture, setProfilePicture] = useState(null);
+  const [userData, setUserData] = useState(null);
+
+  const fetchUserData = async () => {
+    try {
+      const savedUserData = await AsyncStorage.getItem('UserData');
+      if (savedUserData) {
+        const parsedUserData = JSON.parse(savedUserData);
+        setUserData(parsedUserData);
+        setProfilePicture(main_url + parsedUserData.profile_picture);
+        setUserName(parsedUserData.username);
+        setPhoneNumber(parsedUserData.phone_number);
+        setAbout(parsedUserData.about);
+        setEmail(parsedUserData.email);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const encodeImageToBase64 = async (image) => {
+    try {
+      if (!image) return ''; // Return an empty string if no image is selected
+
+      const response = await fetch(image);
+      const blob = await response.blob();
+      const base64String = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+
+      return base64String;
+    } catch (error) {
+      console.error('Error encoding image to base64:', error);
+      throw error;
+    }
+  };
+
+  const saveProfileData = async (username, about, phone, email, profile) => {
+    const token = await AsyncStorage.getItem('userToken');
+    if (token) {
+      const jsonObject = JSON.parse(token);
+      try {
+        const profileImageBase64 = await encodeImageToBase64(profile); // Encode selected image to base64
+
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('about', about);
+        formData.append('phone_number', phone);
+        formData.append('email', email);
+        formData.append('profile_picture', profileImageBase64);
+
+        const response = await axios.put(main_url + '/user/user-info/', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${jsonObject.access}`,
+          },
+        });
+
+        if (response.status === 200) {
+          console.log('Profile data saved successfully');
+        } else {
+          console.error('Failed to save profile data');
+        }
+      } catch (error) {
+        console.error('Error saving profile data:', error);
+      }
+    }
+  };
+
+  const handleChooseImage = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        alert('Permission to access camera roll is required!');
+        return;
+      }
+
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+
+      if (!pickerResult.canceled) {
+        setProfilePicture(pickerResult.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error choosing image:', error);
+    }
+  };
 
   const handleSave = () => {
-    // Handle saving profile information
-    // You can send this data to your backend using axios or any other method
+    saveProfileData(userName, about, phoneNumber, email, profilePicture);
+    onClose();
   };
-
-  const handleChooseImage = () => {
-    // Implement image picker functionality
-    // You can use libraries like react-native-image-picker or expo-image-picker
-  };
-
 
   return (
     <Modal transparent visible={visible} animationType="slide">
@@ -39,10 +127,9 @@ export default function EditProfile({ visible, onClose }) {
           </TouchableOpacity>
           <Text style={styles.modalTitle}>Edit Profile</Text>
           <TouchableOpacity style={styles.createButton} onPress={handleSave}>
-            <Text style={{color:'white'}}>Save</Text>
+            <Text style={{ color: 'white' }}>Save</Text>
           </TouchableOpacity>
         </View>
-
         <>
           <ScrollView
             style={styles.modalContent}
@@ -57,7 +144,7 @@ export default function EditProfile({ visible, onClose }) {
               )}
             </TouchableOpacity>
             <View style={styles.inputContainer}>
-              <MaterialCommunityIcons name="account" size={34}  style={styles.inputIcon} />
+              <MaterialCommunityIcons name="account" size={34} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="User Name"
@@ -67,17 +154,17 @@ export default function EditProfile({ visible, onClose }) {
             </View>
             <Text style={styles.inputDescription}>This is not your username or pin. This name will be visible to your CC contacts.</Text>
             <View style={styles.inputContainer}>
-              <MaterialCommunityIcons name="information" size={34}  style={styles.inputIcon} />
+              <MaterialCommunityIcons name="information" size={34} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="About"
                 value={about}
                 onChangeText={setAbout}
               />
-            </View> 
+            </View>
             <Text style={styles.inputDescription}>About</Text>
             <View style={styles.inputContainer}>
-              <MaterialCommunityIcons name="phone" size={34}  style={styles.inputIcon} />
+              <MaterialCommunityIcons name="phone" size={34} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Phone Number"
@@ -88,16 +175,16 @@ export default function EditProfile({ visible, onClose }) {
             </View>
             <Text style={styles.inputDescription}>Phone</Text>
             <View style={styles.inputContainer}>
-              <MaterialCommunityIcons name="email" size={34}  style={styles.inputIcon} />
+              <MaterialCommunityIcons name="email" size={34} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Email"
                 value={email}
-                onChangeText={setPhoneNumber}
-                keyboardType="phone-pad"
+                onChangeText={setEmail}
+                keyboardType="email-address"
               />
             </View>
-            <Text style={styles.inputDescription}>Eail</Text>
+            <Text style={styles.inputDescription}>Email</Text>
           </ScrollView>
         </>
       </View>

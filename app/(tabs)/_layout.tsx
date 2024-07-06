@@ -11,9 +11,9 @@ import { main_url } from '../../src/constants/Urls';
 import ChannelsScreen from '../../app/(tabs)/channels';
 import Index from '../../app/(tabs)';
 import Profile from '../../app/(tabs)/profile';
-import NotificationScreen from '../../app/(tabs)/notifications';
 import { ThemeProvider } from '../../src/constants/ThemeContext';
 import { useTheme } from '../../src/constants/ThemeContext';
+import BroadCast from '../../app/(tabs)/notifications';
 
 
 
@@ -111,10 +111,11 @@ console.log('NIgel==========================',useTheme())
         }}
       />
       <Tab.Screen
-        name="Notification"
-        component={NotificationScreen}
+        name="BroadCast"
+        component={BroadCast}
         options={{
-          tabBarIcon: ({ color }) => <FontAwesome name="bell" size={24} color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesome name="tv" size={24} color={color} />,
+          headerShown: false,
         }}
       />
       <Tab.Screen
