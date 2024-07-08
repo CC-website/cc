@@ -55,6 +55,7 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const Stack = createNativeStackNavigator<RootStackParamList>();
 
+  
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack.Navigator>

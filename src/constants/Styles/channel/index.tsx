@@ -10,12 +10,23 @@ export default function Styles() {
     
     container: {
       flex: 1,
+      zIndex: 9999,
       flexDirection: 'row',
       backgroundColor: theme?.isDarkMode? Colors.dark.background : Colors.light.background,
+    },
+    overlay: {
+      backgroundColor: 'red',
+      zIndex: -1,
     },
     sectionBase: {
       justifyContent: 'center',
       backgroundColor: 'transparent',
+    },
+    swipeableView: {
+      width: 200,
+      height: 200,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     section: {
       overflow: 'hidden',
@@ -23,6 +34,20 @@ export default function Styles() {
       alignItems: 'center',
       backgroundColor: theme?.isDarkMode ? Colors.dark.section.background : Colors.light.section.background,
       borderRadius: 10,
+    },
+    groupSection: {
+      width: '100%',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    cornerContainer: {
+      position: 'absolute',
+      bottom: 20, // Adjust as needed
+      right: 20, // Adjust as needed
+      width: 200, // Adjust as needed
+      height: 200, // Adjust as needed
+      backgroundColor: 'rgba(0,0,0,0.5)', // Optional: To create a background for the modal
+      zIndex: 9999, // Ensure it's above other content
     },
     sectionContainer: {
       width: 10,
@@ -179,6 +204,38 @@ export default function Styles() {
       position: 'absolute',
       left: 6,
       top: 6,
+    },
+    modal: {
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    modalContent: {
+      backgroundColor: '#fff',
+      borderRadius: 10,
+      padding: 20,
+      width: '80%',
+      maxWidth: 400,
+      maxHeight: '80%',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    modalHeaderText: {
+      fontSize: 18,
+      fontWeight: 'bold',
+    },
+    closeButton: {
+      padding: 10,
     },
   });
 
