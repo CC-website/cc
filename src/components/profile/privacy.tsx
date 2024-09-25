@@ -85,7 +85,7 @@ export default function Privacy({ visible, onClose }) {
           
           console.log(userData);
         } else {
-          console.error('Failed to fetch user data');
+          console.log('Failed to fetch user data');
         }
       } catch (error) {
         console.error('Error fetching user data:', error);

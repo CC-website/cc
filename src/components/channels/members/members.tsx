@@ -1,176 +1,362 @@
-// Members.js
-
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, TextInput } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, TextInput, Image, RefreshControl, useColorScheme, Switch } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
 import { main_url } from '../../../constants/Urls';
 import SetPermissions from './setPermissions';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { community } from '../../../constants/StaticData/en.json';
+import { ThemeColors } from '../../../constants/thems';
 
-export default function Members({ visible, onClose, onCreateChannel, setOverview }) {
+export default function Members({ visible, onClose, onCreateChannel, setOverview, channelId, target_type, subchannelId }) {
+
   const [selectedTab, setSelectedTab] = useState('members');
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [setPermissionsModal, setSetpermissionsModal] = useState(false);
   const [permissionsData, setPermissionsData] = useState([]);
-  const [permissions, setPermissions] = useState([])
-  const [singleUser, setSingleUser] = useState([])
+  const [permissions, setPermissions] = useState([]);
+  const [singleUser, setSingleUser] = useState([]);
   const [ownerData, setOwnerData] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [subchannelMembers, setSubchannelMembers] = useState([]);
+  const [groupMembers, setGroupMembers] = useState([]);
+  const [memberToggles, setMemberToggles] = useState({}); // For subchannel/group membership toggles
+  const scheme = useColorScheme();
+  const themeColors = ThemeColors[scheme];
 
-  // Function to fetch owner data
-  const fetchOwnerData = async () => {
-    try {
-      const response = await axios.get(`${main_url}/api/channels/owner/${setOverview.id}`);
-      console.log(response.data)
-      setOwnerData(response.data); // Assuming the response contains owner data
-    } catch (error) {
-      console.log("Error fetching owner data:", error);
+ 
+  const handelOpenPermission = (id) => {
+
+    // Check if the passed `id` exists in the selectedMemberIds array
+    if (target_type === 'channel') {
+        // Filter the selected user object from subchannelMembers
+        const selectedUser = users.find(member => member.id === id);
+        
+        setSetpermissionsModal(true);
+
+        // Set the complete user object to setSingleUser
+        console.log("now you can see ==========================================", selectedUser)
+        if (selectedUser) {
+            setSingleUser(selectedUser);
+            console.log("Selected User Object:", selectedUser);
+        }
     }
-  };
-
-  useEffect(() => {
-    fetchOwnerData();
-  }, []);
-
-  useEffect(() => {
-    fetchPermissions();
-    fetchUsers();
-  }, [selectedTab]);
-
-  const fetchUsers = async () => {
-    try {
-      const response = await axios.get(`${main_url}/api/channels/${setOverview.id}/members/`);
-      setUsers(response.data);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  };
-
-  const fetchPermissions = async () => {
-    try {
-      let userIds = [];
-      users.forEach(element => {
-        userIds.push(element.id);
-      });
-  
-      const response = await axios.get(`${main_url}/api/permissions/list/`, {
-        params: { user_ids: userIds, target_id: setOverview.id }
-      });
-  
-      // Filter out duplicate permissions based on their IDs
-      const uniquePermissions = Array.from(new Set(response.data.map(permission => permission.id)))
-        .map(id => response.data.find(permission => permission.id === id));
-  
-      setPermissions(uniquePermissions);
-    } catch (error) {
-      console.error('Error fetching permissions:', error);
-    }
-  };
-  
-  
-
-
-  const closeSetpermissionsModal = () =>{
-    setSetpermissionsModal(false)
-  }
-   
-
-
-  const handleSearch = (text) => {
-    setSearchTerm(text);
-  };
-
-
-  const filteredUsers = users.filter(user =>
-    user.username.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleSelectedUser = (userId) => {
-    // Fetch permissions
-    fetchPermissions();
-
-    // Find the selected user
-    const selectedUser = users.find(user => user.id === userId);
-    console.log("Selected User:", selectedUser);
-
-    // Filter permissions based on the selected user's ID
-    const filteredPermissions = permissions.filter(permission => 
-        permission.members.some(member => member.id === userId)
-    );
-    console.log("Filtered Permissions:", filteredPermissions);
-
-    // Set permissions data and open the modal
-    setSingleUser(selectedUser)
-    setPermissionsData(filteredPermissions);
-    setSetpermissionsModal(true);
 };
 
 
 
 
+  const handelClosePermission = () =>{
+    setSetpermissionsModal(false)
+  }
+
+  // Function to fetch owner data
+  const fetchOwnerData = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const jsonObject = JSON.parse(token);
+
+      if (token) {
+        const response = await axios.get(`${main_url}/api/channels/owner/${channelId}/`, {
+          headers: {
+            'Authorization': 'Bearer ' + jsonObject.access
+          }
+        });
+        setOwnerData(response.data.owner);
+      } else {
+        console.log('No token found');
+      }
+    } catch (error) {
+      console.log("Error fetching owner data:", error);
+    }
+  };
+
+  // Function to fetch channel members
+  const fetchChannelMembers = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const jsonObject = JSON.parse(token);
+
+      if (token) {
+        const response = await axios.get(`${main_url}/api/channels/${channelId}/members/`, {
+          headers: {
+            'Authorization': 'Bearer ' + jsonObject.access
+          }
+        });
+        setUsers(response.data.members);
+      } else {
+        console.log('No token found');
+      }
+    } catch (error) {
+      console.log('Error fetching channel members:', error);
+    }
+  };
+
+  // Function to fetch subchannel members
+  const fetchSubchannelMembers = async (check) => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+  
+      if (!token) {
+        console.log('No token found');
+        return;
+      }
+  
+      const jsonObject = JSON.parse(token);
+      const subchannelId_shape = subchannelId
+      const url = target_type === 'group'
+        ? `${main_url}/api/subchannels/${subchannelId_shape}/members/`
+        : `${main_url}/api/subchannels/${setOverview.id}/members/`;
+  
+      const response = await axios.get(url, {
+        headers: {
+          'Authorization': `Bearer ${jsonObject.access}`
+        }
+      });
+  
+      const members = response.data.members || []; // Default to empty array if not found
+      setUsers(members);
+  
+      // Initialize memberToggles for subchannel
+      if(check == 1){
+        const toggles = {};
+        members.forEach(member => {
+          toggles[member.id] = true; // Set default toggle value (true if they are part of the subchannel)
+        });
+        setMemberToggles(toggles); // Update state with the toggles
+      }
+      
+  
+    } catch (error) {
+      console.error('Error fetching subchannel members:', error);
+    }
+  };
+  
+
+  // Function to fetch group members
+  const fetchGroupMembers = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const jsonObject = JSON.parse(token);
+
+      if (token) {
+        const response = await axios.get(`${main_url}/api/groups/${setOverview.id}/members/`, {
+          headers: {
+            'Authorization': 'Bearer ' + jsonObject.access
+          }
+        });
+
+        const members = response.data.members;
+        setUsers(members);
+
+        // Initialize memberToggles for group
+        const toggles = {};
+        members.forEach(member => {
+          toggles[member.id] = true; // Set default toggle value (true if they are part of the group)
+        });
+        setMemberToggles(toggles); // Update state with the toggles
+      } else {
+        console.log('No token found');
+      }
+    } catch (error) {
+      console.log('Error fetching group members:', error);
+    }
+  };
+
+
+  useEffect(() => {
+    fetchOwnerData();
+    if (target_type === 'channel') {
+      fetchChannelMembers();
+    } else if (target_type === 'subchannel') {
+      const check = 1
+      fetchSubchannelMembers(check);
+      fetchChannelMembers();
+    } else if (target_type === 'group') {
+      const check = 2
+      fetchSubchannelMembers(check);
+      fetchGroupMembers();
+    }
+  }, [target_type]);
+
+  // Toggle member between channel and subchannel
+  const toggleSubchannelMembership = (memberId) => {
+    setMemberToggles((prevToggles) => ({
+      ...prevToggles,
+      [memberId]: !prevToggles[memberId],
+    }));
+  };
+
+  // Toggle member between subchannel and group
+  const toggleGroupMembership = (memberId) => {
+    setMemberToggles((prevToggles) => ({
+      ...prevToggles,
+      [memberId]: !prevToggles[memberId],
+    }));
+  };
+
+  const handleUpdatesubchannel = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+  
+      if (!token) {
+        console.log('No token found');
+        return;
+      }
+  
+      const jsonObject = JSON.parse(token);
+  
+      // Convert memberToggles object to an array of selected member IDs
+      const selectedMemberIds = Object.keys(memberToggles).filter(id => memberToggles[id] === true);
+      
+      // Initialize request variables
+      let requestBody;
+      let url;
+  
+      if (target_type === 'group') {
+        requestBody = {
+          group_id: setOverview.id,
+          members: selectedMemberIds
+        };
+        url = `${main_url}/api/groups/members/`;
+      } else {
+        requestBody = {
+          sub_channel_id: setOverview.id,
+          members: selectedMemberIds
+        };
+        url = `${main_url}/api/subchannels/members/`;
+      }
+  
+      console.log("Channel ID:", setOverview.id);
+      console.log("Selected members (array of IDs):", selectedMemberIds);
+  
+      // Make POST request with JSON body
+      const response = await axios.post(url, requestBody, {
+        headers: {
+          'Authorization': `Bearer ${jsonObject.access}`,
+          'Content-Type': 'application/json',
+        }
+      });
+  
+      setSubchannelMembers(response.data.members);
+      onClose();
+      
+    } catch (error) {
+      console.error('Error updating subchannel members:', error);
+    }
+  };
+  
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    if (target_type === 'channel') {
+      fetchChannelMembers().then(() => setRefreshing(false));
+    } else if (target_type === 'subchannel') {
+      const check = 1
+      fetchChannelMembers();
+      fetchSubchannelMembers(check).then(() => setRefreshing(false));
+    } else if (target_type === 'group') {
+      const check = 2
+      fetchSubchannelMembers(check);
+      fetchGroupMembers().then(() => setRefreshing(false));
+    }
+  }, [target_type]);
+
+  const filteredUsers = users.filter(user =>
+    user.username.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <Modal transparent visible={visible} animationType="slide">
-      <View style={styles.modalContainer}>
+    <Modal style={{ backgroundColor: themeColors.background }} transparent visible={visible} animationType="slide">
+      <View style={[styles.modalContainer,{ backgroundColor: themeColors.background }]}>
         <View style={styles.backButtonContainer}>
           <TouchableOpacity style={styles.backButton} onPress={onClose}>
-            <Icon name="arrow-left" size={18} color="#fff" />
+            <Icon name="arrow-left" size={18} style={{ color: themeColors.text }} />
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>Create New Group</Text>
-          <TouchableOpacity style={styles.createButton}>
-            <Ionicons name="add-circle-outline" size={24} color="#fff" />
+          <View style={styles.titleContainer}>
+            <Text style={[styles.modalTitle,  { color: themeColors.text }]}>{setOverview.name} {community.settings.members.title}</Text>
+          </View>
+          {target_type === 'subchannel'?(
+            <TouchableOpacity style={styles.createButton} onPress={handleUpdatesubchannel}>
+            <Text style={{ color: themeColors.text }}>{community.settings.members.save}</Text>
           </TouchableOpacity>
+          ): target_type === 'group'?(
+            <TouchableOpacity style={styles.createButton} onPress={handleUpdatesubchannel}>
+            <Text style={{ color: themeColors.text }}>{community.settings.members.save}</Text>
+          </TouchableOpacity>
+          ):null}
+          
         </View>
-          <>
-            <View style={styles.searchContainer}>
-              <TextInput
-                style={styles.searchInput}
-                onChangeText={handleSearch}
-                value={searchTerm}
-                placeholder="Search by username"
-                placeholderTextColor="#ccc"
-              />
-            </View>
-            <View>
-              {ownerData && (
-                <View style={styles.userInfoContainer}>
-                  <View style={styles.userpiccontainer}>
-                    <Icon name="user" size={24} color="#fff" />
-                  </View>
-                  <Text style={styles.username}>Owner: {ownerData.username}</Text>
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={[styles.searchInput,  { color: themeColors.text }]}
+            onChangeText={setSearchTerm}
+            value={searchTerm}
+            placeholder={community.settings.members.search}
+            placeholderTextColor="#ccc"
+          />
+        </View>
+        <View>
+            {ownerData && (
+              <View style={styles.userInfoContainer}>
+                <View style={styles.userpiccontainer}>
+                <Image
+                    style={styles.memberImage}
+                    source={{ uri: `${main_url.replace(/\/$/, '')}/${ownerData.profile_picture.replace(/^\//, '')}` }}
+                  />
                 </View>
+                <Text style={[styles.username,  { color: themeColors.text }]}>{community.settings.members.owner}: {ownerData.username}</Text>
+              </View>
+            )}
+          </View>
+        <ScrollView
+          style={[styles.modalContent, { backgroundColor: themeColors.background }]}
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
+          {filteredUsers.map((user) => (
+            <TouchableOpacity key={user.id} style={styles.members} onPress={() => handelOpenPermission(user.id)}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={styles.userIcon}>
+                  <Image
+                    style={styles.memberImage}
+                    source={{ uri: `${main_url.replace(/\/$/, '')}/${user.profile_picture.replace(/^\//, '')}` }}
+                    onError={() => console.log('Error loading image')}
+                  />
+                </View>
+                <Text style={[styles.username, { color: themeColors.text }]}>{user.username}</Text>
+              </View>
+              {target_type === 'subchannel' && (
+                <Switch
+                  value={memberToggles[user.id] || false}
+                  onValueChange={() => toggleSubchannelMembership(user.id)}
+                />
               )}
-            </View>
-            <ScrollView
-              style={styles.modalContent}
-              showsVerticalScrollIndicator={false}
-              showsHorizontalScrollIndicator={false}
-            >
-              {filteredUsers.map((user) => (
-                <View key={user.id} style={styles.members}>
-                    <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }} onPress={ () => handleSelectedUser(user.id)}>
-                        <View style={styles.userIcon}>
-                            <Icon name="user" size={24} color="#fff" />
-                        </View>
-                        <Text style={styles.username}>{user.username}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={ () => handleSelectedUser(user.id)}>
-                      <MaterialCommunityIcons name="chevron-right" size={24} color="white" />
-                    </TouchableOpacity>
-                </View>
-            ))}
-
-            </ScrollView>
-          </>
+              {target_type === 'group' && (
+                <Switch
+                  value={memberToggles[user.id] || false}
+                  onValueChange={() => toggleGroupMembership(user.id)}
+                />
+              )}
+              {target_type === 'group'? (
+               <></>
+              ): target_type === 'subchannel'? (
+                <></>
+            ):( <MaterialCommunityIcons name="chevron-right" size={24} style={{ color: themeColors.text }} />)}
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
       <SetPermissions
-      visible={setPermissionsModal}
-      onClose={closeSetpermissionsModal}
-      permissionsData = {permissionsData}
-      setOverview={setOverview}
-      singleUser={singleUser}
-      /> 
+        visible={setPermissionsModal}
+        onClose={handelClosePermission}
+        permissionsData={permissionsData}
+        setOverview={setOverview}
+        singleUser={singleUser}
+      />
     </Modal>
   );
 }
@@ -184,131 +370,90 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#202020',
+    borderRadius: 8,
     padding: 20,
-    borderRadius: 10,
     width: '100%',
-    height: '91%',
-  },
-  backButtonContainer: {
-    padding: 10,
-    paddingBottom: -10,
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderBottomWidth: 0.3,
-    borderBottomColor: '#fff',
-  },
-  backButton: {
-    position: 'relative',
-    top: 10,
-    left: 0,
-    padding: 10,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 30,
-    color: 'white',
-    marginTop: 20,
-  },
-  createButton: {
-    backgroundColor: '#36393f',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-    width: 60,
-    height: 50,
-    marginRight: 10,
-    marginTop: 8,
-    justifyContent: 'center',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
     marginBottom: 10,
+    color: '#fff',
+    marginTop: 5,
+  },
+  closeButton: {
+    alignSelf: 'flex-end',
     marginTop: 10,
   },
-  tab: {
+  searchContainer: {
+    backgroundColor: '#333',
     padding: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  selectedTab: {
-    borderBottomColor: '#fff',
-  },
-  tabText: {
+    borderRadius: 10,
+    marginBottom: 10,
+    width:'80%',
     color: '#fff',
-    fontWeight: 'bold',
+    height: 40,
+  },
+  searchInput: {
+    color: '#fff',
+  },
+  backButtonContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent:'space-between',
+    marginBottom: 10,
+    width: "100%",
+    paddingLeft: 5,
+    paddingRight: 10,
+  },
+  titleContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backButton: {
+    padding: 10,
+  },
+  createButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  userIcon: {
+    backgroundColor: 'graywishdarkblue',
+    padding: 10,
+    borderRadius: 10,
+    marginRight: 10,
+  },
+  username: {
+    fontSize: 16,
+    color: '#fff',
   },
   members: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    borderBlockColor: 'white',
+    justifyContent: 'space-between',
+    padding: 10,
+    marginVertical: 5,
+    borderRadius: 10,
+    backgroundColor: 'graywishdarkblue',
+    borderBlockColor: ThemeColors.text,
     borderBottomWidth: .4 ,
-    marginBottom: 20,
-    paddingBottom: 10,
-  },
-  searchContainer: {
-    backgroundColor: 'transparent',
-    borderRadius: 5,
-    padding: 25,
-    marginBottom: 10,
-    width: '100%',
   },
   userInfoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 30,
-    backgroundColor: "gray",
-    borderRadius: 5,
-    padding: 6,
-  },
-  searchInput: {
-    color: '#fff',
-    backgroundColor: '#333',
-    height: 38,
-    padding: 10,
-    borderRadius: 20
-  },
-  userpiccontainer: {
-    backgroundColor: '#36393f',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 10, 
-    borderRadius: 50,
-    height: 40,
-    width: 40,
-  },
-  permissionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    paddingBottom: 10,
     marginBottom: 10,
   },
-  userActions: {
-    flexDirection: 'row',
+  userpiccontainer: {
+    backgroundColor: 'graywishdarkblue',
+    padding: 10,
+    borderRadius: 10,
+    marginRight: 10,
   },
-  memversAction: {
-    width: '60%',
-    justifyContent: 'space-between',
-    flexDirection: 'row'
-  },
-  username: {
-    color: '#fff',
-    fontWeight: 'bold',
-    marginLeft: 10,
-},
-userIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'gray',
-    justifyContent: 'center',
-    alignItems: 'center',
-},
-
+  memberImage: {
+    width: 40,  // set appropriate width
+    height: 40, // set appropriate height
+    resizeMode: 'cover',
+    borderRadius: 25, // appropriate radius for a circle
+  }
+  
 });

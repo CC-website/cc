@@ -1,14 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, Switch } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, Switch, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { main_url } from '../../../constants/Urls';
 import axios from 'axios';
+import { community } from '../../../constants/StaticData/en.json';
+import { ThemeColors } from '../../../constants/thems';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Permissionspermission({ visible, onClose, setOverview, permissions, allPermission }) {
     const [permissionToggles, setPermissionToggles] = useState({});
+    const scheme = useColorScheme();
+    const themeColors = ThemeColors[scheme];
 
     // Initialize the permission toggles based on the permissions data
     useEffect(() => {
+        console.log("check or show the permissions for test", permissions)
+        console.log("check or show the all permissions for test", allPermission)
         const initialToggles = {};
         permissions[0].permission.forEach(permission => {
             initialToggles[permission] = true;
@@ -45,7 +52,17 @@ export default function Permissionspermission({ visible, onClose, setOverview, p
             console.log(formData);
             
             const url = `${main_url}/api/permissions/assign/`;
-            const response = await axios.put(url, formData);
+            const token = await AsyncStorage.getItem('userToken');
+            const jsonObject = JSON.parse(token);
+    
+            if (token) {
+            const response = await axios.put(url, formData, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + jsonObject.access
+                }
+            });
+        }
             
             onClose();
         } catch (error) {
@@ -54,26 +71,26 @@ export default function Permissionspermission({ visible, onClose, setOverview, p
     };
 
     return (
-        <Modal transparent visible={visible} animationType="slide">
-            <View style={styles.modalContainer}>
-                <View style={styles.modalContent}>
+        <Modal style={{ backgroundColor: themeColors.background }} transparent visible={visible} animationType="slide">
+            <View style={[styles.modalContainer, { backgroundColor: themeColors.background }]}>
+                <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
                     <View style={styles.backButtonContainer}>
                         <TouchableOpacity style={styles.backButton} onPress={onClose}>
-                            <Ionicons name="arrow-back" size={24} color="white" />
+                            <Ionicons name="arrow-back" size={24} style={{ color: themeColors.text }} />
                         </TouchableOpacity>
-                        <Text style={styles.modalTitle}>{setOverview.name}</Text>
+                        <Text style={[styles.modalTitle, { color: themeColors.text }]}>{setOverview.name}</Text>
                         <TouchableOpacity style={styles.createButton} onPress={handleCreateButtonPress}>
-                            <Text style={{color:'white'}}>Save</Text>
+                            <Text style={{ color: themeColors.text }}>{community.settings.members.save}</Text>
                         </TouchableOpacity>
                     </View>
-                    <View style={styles.section}>
+                    <View style={[styles.section, { backgroundColor: themeColors.background }]}>
                         <View style={styles.spliter}></View>
-                        <Text style={styles.sectionSubTitle}>Use roles to group your channel members and assign permissions.</Text>
-                        <ScrollView>
+                        <Text style={[styles.sectionSubTitle, { color: themeColors.text }]}>{community.settings.members.user_role_text}</Text>
+                        <ScrollView style={[{paddingBottom:20}, { backgroundColor: themeColors.background }]}>
                             {/* List all permissions from allPermission */}
                             {allPermission.map(permission => (
                                 <View key={permission.id} style={styles.permissionItem}>
-                                    <Text style={styles.permissionType}>{permission.permission_type}</Text>
+                                    <Text style={[styles.permissionType, { color: themeColors.text }]}>{permission.permission_type}</Text>
                                     <Switch
                                         trackColor={{ false: "#767577", true: "#81b0ff" }}
                                         thumbColor={permissionToggles[permission.permission_type] ? "#81b0ff" : "#f4f3f4"}
@@ -108,6 +125,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#202020',
         borderRadius: 10,
         marginTop: 20,
+        paddingBottom: 140,
     },
     sectionSubTitle: {
         fontSize: 12,
@@ -150,7 +168,7 @@ const styles = StyleSheet.create({
         width: '100%',
         flexDirection: 'row',
         borderBottomWidth: 0.3,
-        borderBottomColor: '#fff',
+        borderBottomColor: ThemeColors.text,
         justifyContent: 'space-between'
     },
     permissionItem: {
@@ -159,7 +177,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingVertical: 10,
         borderBottomWidth: 1,
-        borderBottomColor: '#444',
+        borderBottomColor: ThemeColors.text,
     },
     permissionType: {
         color: 'white',

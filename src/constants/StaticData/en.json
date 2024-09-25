@@ -46,7 +46,44 @@
     "like": "Like",
     "comment": "Comment",
     "share": "Share",
-    "empty_community": "No community posts."
+    "empty_community": "No community posts.",
+    "create_community": {
+      "title": "Create New Community",
+      "name": "Community Name",
+      "description": "Community Description",
+      "log": "upload Logo",
+      "follow": "Follow",
+      "connect": "Connect",
+      "find_communit": "Finde Community",
+      "request": "Pending"
+    },
+    "settings":{
+      "members":{
+        "title": "Members",
+        "search": "Search by username",
+        "owner": "Owner",
+        "band": "Baned Members",
+        "save": "Save",
+        "invite_title": "Invite Link",
+        "invite_link": "Current Invite Link",
+        "generate_invite_link": "Generate New Link",
+        "role": "Role",
+        "permissions": "Permissions",
+        "create_role": "Create a new role",
+        "role_comment": "Give this role a unique name. You can always change this later.",
+        "all_user": "All Users",
+        "close": "Close",
+        "all_members": "All Members",
+        "user_role_text": "Use roles to group your channel members and assign permissions.",
+        "role_name": "Role name",
+        "allow_anyone": "Allow anyone to @mention this role",
+        "members": "Members",
+        "delete_role": "Delete Role",
+        "user_role_text2": " Use roles to group your channel members and assign permissions.",
+        "for_all_members": "ROLES FOR ALL MEMBERS",
+        "defualt": "Default permissions for all channel members"
+      }
+    }
   },
   "broadcast": {
     "title": "Broadcast",

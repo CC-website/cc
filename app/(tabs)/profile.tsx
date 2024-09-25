@@ -122,10 +122,11 @@ export default function Profile() {
           
           // Save userData object locally (after converting to string)
           await saveUserData(userData);
+          console.log(userData)
           // setUserData(userData);
           
         } else {
-          console.error('Failed to fetch user data');
+          console.log('Failed to fetch user data');
         }
       } catch (error) {
         console.error('Error fetching user data:', error);

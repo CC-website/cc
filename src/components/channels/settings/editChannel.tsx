@@ -111,6 +111,8 @@ export default function EditChannels({ visible, onClose, setOverview }) {
                                 visible={editGroups}
                                 onClose={closeEditGroup}
                                 setOverview={group}
+                                channelId={setOverview.id}
+                                subchannelId={subchannel.id}
                               />
                             )}
                           </View>
@@ -135,6 +137,7 @@ export default function EditChannels({ visible, onClose, setOverview }) {
             ? setOverview.subchannels.find((subchannel) => subchannel.id === selectedSubchannelId)
             : setOverview
         }
+        channelId ={setOverview.id}
       />
     </Modal>
   );

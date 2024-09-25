@@ -12,7 +12,7 @@ export default function Styles() {
       flex: 1,
       zIndex: 9999,
       flexDirection: 'row',
-      backgroundColor: theme?.isDarkMode? Colors.dark.background : Colors.light.background,
+      backgroundColor: 'transparent'
     },
     overlay: {
       backgroundColor: 'red',
@@ -134,17 +134,10 @@ export default function Styles() {
     },
     searchInput: {
       flex: 1,
-      color: '#fff',
       paddingLeft: 10,
-      borderLeftWidth: 1,
-      borderBottomWidth: 1,
-      borderTopWidth: 1,
-      borderColor: '#fff',
+      paddingTop: 2,
       height: 34,
       width: '80%',
-      paddingRight: 10,
-      borderTopLeftRadius: 30,
-      borderBottomLeftRadius: 30,
     },
     searchButton: {
       backgroundColor: '#36393f',

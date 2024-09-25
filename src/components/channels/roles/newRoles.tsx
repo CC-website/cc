@@ -1,113 +1,181 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, Switch } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet, ScrollView, Switch, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { main_url } from '../../../constants/Urls';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { community } from '../../../constants/StaticData/en.json';
+import { ThemeColors } from '../../../constants/thems';
 
-export default function NewRoles({ visible, onClose, setOverview }) {
+export default function NewRoles({ visible, onClose, setOverview, channelId, target_type }) {
     const [enteredRole, setEnteredRole] = useState('');
     const [selectedPermission, setSelectedPermission] = useState([]);
     const [selectedMembers, setSelectedMembers] = useState([]);
+    const [allUsersSelected, setAllUsersSelected] = useState(false);
     const [step, setStep] = useState(1);
     const [showPermissionPopup, setShowPermissionPopup] = useState(false);
     const [showMemberPopup, setShowMemberPopup] = useState(false);
     const [showRolePopup, setShowRolePopup] = useState(false);
+    const [errorPopupMessage, setErrorPopupMessage] = useState('');
     const [selectedTab, setSelectedTab] = useState('role');
+    const scheme = useColorScheme();
+    const themeColors = ThemeColors[scheme];
 
     useEffect(() => {
         fetchPermissions();
     }, []);
 
+    useEffect(() => {
+        if (step === 3) {
+            if(target_type === 'community'){
+                fetchUsers();
+            }else{
+                if(target_type === 'sub-community'){
+                    fetchSubChannelUsers();
+                }else{
+                    if(target_type === 'group'){
+                        fetchGroupUsers();
+                    }
+                }
+            }
+            
+        }
+    }, [step]);
+
     const fetchUsers = async () => {
         try {
-            const allData = ['members/', 'admins/', 'blocked-members/'];
-            const fetchedMembers = [];
-            for (const element of allData) {
-                const response = await axios.get(`${main_url}/api/channels/${setOverview.id}/${element}`);
-                response.data.forEach(element => {
-                    fetchedMembers.push({ ...element, selected: false });
+            const token = await AsyncStorage.getItem('userToken');
+            const jsonObject = JSON.parse(token);
+            if (jsonObject) {
+                const response = await axios.get(`${main_url}/api/channels/${channelId}/members/`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + jsonObject.access
+                    }
                 });
+                setSelectedMembers(response.data.members.map(member => ({ ...member, selected: false })));
+            } else {
+                console.log('No token found');
             }
-            setSelectedMembers(fetchedMembers);
         } catch (error) {
-            console.error('Error fetching users:', error);
+            console.log('Error fetching users:', error);
+        }
+    };
+
+    const fetchSubChannelUsers = async () => {
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const jsonObject = JSON.parse(token);
+            if (jsonObject) {
+                const response = await axios.get(`${main_url}/api/subchannels/${setOverview.id}/members/`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + jsonObject.access
+                    }
+                });
+                 setSelectedMembers(response.data.members.map(member => ({ ...member, selected: false })));
+            } else {
+                console.log('No token found');
+            }
+        } catch (error) {
+            console.log('Error fetching users:', error);
+        }
+    };
+
+    const fetchGroupUsers = async () => {
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const jsonObject = JSON.parse(token);
+            if (jsonObject) {
+                const response = await axios.get(`${main_url}/api/groups/${setOverview.id}/members/`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + jsonObject.access
+                    }
+                });
+                setSelectedMembers(response.data.members.map(member => ({ ...member, selected: false })));
+            } else {
+                console.log('No token found');
+            }
+        } catch (error) {
+            console.log('Error fetching users:', error);
         }
     };
 
     const fetchPermissions = async () => {
         try {
-            const response = await axios.get(`${main_url}/api/permissions/types/`);
-            setSelectedPermission(response.data.map(perm => ({ ...perm, selected: false })));
+            const token = await AsyncStorage.getItem('userToken');
+            const jsonObject = JSON.parse(token);
+            if (jsonObject) {
+                const response = await axios.get(`${main_url}/api/permissions/types/?target_type=${target_type}`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + jsonObject.access
+                    }
+                });
+                setSelectedPermission(response.data.map(perm => ({ ...perm, selected: false })));
+            } else {
+                console.log('No token found');
+            }
         } catch (error) {
-            console.error('Error fetching permissions:', error);
+            console.log('Error fetching permissions:', error);
         }
     };
 
     const handleNextStep = () => {
         if (step === 1 && enteredRole !== '') {
             setStep(2);
-            handleTabChange('permissions')
-            setSelectedTab('permissions');
+            handleTabChange('permissions');
         } else if (step === 2 && selectedPermission.some(perm => perm.selected)) {
             setStep(3);
-            fetchUsers();
-            handleTabChange('members')
-            setSelectedTab('members');
-        } else if(enteredRole == ''){
-            setShowRolePopup(true)
-            setTimeout(() => {
-                setShowRolePopup(false);
-            }, 2000);
-        }else{
-            
+            handleTabChange('members');
+        } else if (enteredRole === '') {
+            setErrorPopupMessage('Please enter a role name.');
+            setShowRolePopup(true);
+        } else {
+            setErrorPopupMessage('Please select at least one permission.');
             setShowPermissionPopup(true);
-            setTimeout(() => {
-                setShowPermissionPopup(false);
-            }, 2000);
         }
     };
 
-    const handdlesetStep = (value) =>{
-        if(value == 1){
-            handleTabChange('role')
-            setStep(1);
-        }else if(value ==2){
-            handleTabChange('permissions')
-            setStep(2);
-        }else if(value ==2){
-            handleTabChange('members')
-            setStep(3);
-        }
-    }
-
     const handleSetPermission = async () => {
-        if (selectedMembers.some(member => member.selected)) {
-            console.log("===================================================")
-            const finalmember = selectedMembers.filter(member => member.selected).map(member => member.id);
-            const finalePremissions = selectedPermission.filter(perm => perm.selected).map(perm => perm.id);
-            
+        if (selectedMembers.some(member => member.selected) || allUsersSelected) {
+            const finalMembers = selectedMembers.filter(member => member.selected).map(member => member.id);
+            const finalPermissions = selectedPermission.filter(perm => perm.selected).map(perm => perm.id);
+
             const formData = {
-                'members' : finalmember,
-                'permission': finalePremissions, // Wrap permissionsData[2] in a list
+                ...(allUsersSelected ? { 'all_members': true } : { 'all_members': false }),
+                'members': finalMembers,
+                'permission': finalPermissions,
                 'permission_type': enteredRole,
-                'target_id': setOverview.id, // Ensure targetId is parsed as an integer
-                'target_type': 'channel',
+                'target_id': setOverview.id,
+                'target_type': target_type,
             };
-            console.log(formData)
+
             const url = `${main_url}/api/permissions/assign/`;
-      
-            const response = await axios.post(url, formData);
-        
-            console.log('Permission set:', response.data);
-            setSelectedMembers([]);
-            setSelectedPermission([]);
-            setEnteredRole('');
-            onClose()
+            const token = await AsyncStorage.getItem('userToken');
+            const jsonObject = JSON.parse(token);
+
+            if (jsonObject) {
+                try {
+                    await axios.post(url, formData, {
+                        headers: {
+                            'Authorization': 'Bearer ' + jsonObject.access
+                        }
+                    });
+                    setSelectedMembers([]);
+                    setSelectedPermission([]);
+                    setEnteredRole('');
+                    setAllUsersSelected(false);
+                    onClose();
+                } catch (error) {
+                    if (error.response && error.response.data && error.response.data.error) {
+                        setErrorPopupMessage(error.response.data.error);
+                    } else {
+                        setErrorPopupMessage('Error setting permission.');
+                    }
+                    setShowMemberPopup(true);
+                }
+            }
         } else {
+            setErrorPopupMessage('Please select at least one member.');
             setShowMemberPopup(true);
-            setTimeout(() => {
-                setShowMemberPopup(false);
-            }, 2000);
         }
     };
 
@@ -122,42 +190,46 @@ export default function NewRoles({ visible, onClose, setOverview }) {
         }
     };
 
+    const toggleAllUsers = (newValue) => {
+        setAllUsersSelected(newValue);
+        setSelectedMembers(selectedMembers.map(member => ({ ...member, selected: newValue })));
+    };
+
     return (
-        <Modal transparent visible={visible} animationType="slide">
-            <View style={styles.modalContainer}>
-                <View style={styles.modalContent}>
-                   
+        <Modal style={{ backgroundColor: themeColors.background }} transparent visible={visible} animationType="slide">
+            <View style={[styles.modalContainer, { backgroundColor: themeColors.background }]}>
+                <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
                     <View style={styles.backButtonContainer}>
                         {step > 1 && (
-                            <TouchableOpacity style={styles.backButton2} onPress={() => handdlesetStep(step - 1)}>
-                               <Ionicons name="arrow-back" size={24} color="white" /> 
+                            <TouchableOpacity style={styles.backButton2} onPress={() => setStep(step - 1)}>
+                                <Ionicons name="arrow-back" size={24} style={{ color: themeColors.text }} />
                             </TouchableOpacity>
                         )}
                         {step <= 1 && (
-                             <TouchableOpacity style={styles.backButton} onPress={onClose}>
-                             <Ionicons name="arrow-back" size={24} color="white" />
-                         </TouchableOpacity>
+                            <TouchableOpacity style={styles.backButton} onPress={onClose}>
+                                <Ionicons name="arrow-back" size={24} style={{ color: themeColors.text }} />
+                            </TouchableOpacity>
                         )}
                         {step < 3 && (
                             <TouchableOpacity style={styles.createButton} onPress={handleNextStep}>
-                                <Ionicons name="arrow-forward" size={24} color="#fff" />
+                                <Ionicons name="arrow-forward" size={24} style={{ color: themeColors.text }} />
                             </TouchableOpacity>
                         )}
                         {step === 3 && (
                             <TouchableOpacity style={styles.createButton} onPress={handleSetPermission}>
-                                <Ionicons name="checkmark-circle-outline" size={24} color="#fff" />
+                                <Ionicons name="checkmark-circle-outline" size={24} style={{ color: themeColors.text }} />
                             </TouchableOpacity>
                         )}
                     </View>
                     <View style={styles.tabContainer}>
-                        <TouchableOpacity  style={[styles.tab, selectedTab === 'role' && styles.selectedTab]}>
-                            <Text style={styles.tabText}>Role</Text>
+                        <TouchableOpacity style={[styles.tab, selectedTab === 'role' && styles.selectedTab]} onPress={() => handleTabChange('role')}>
+                            <Text style={[styles.tabText, { color: themeColors.text }]}>{community.settings.members.role}</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity  style={[styles.tab, selectedTab === 'permissions' && styles.selectedTab]}>
-                            <Text style={styles.tabText}>Permissions</Text>
+                        <TouchableOpacity style={[styles.tab, selectedTab === 'permissions' && styles.selectedTab]} onPress={() => handleTabChange('permissions')}>
+                            <Text style={[styles.tabText, { color: themeColors.text }]}>{community.settings.members.permissions}</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity  style={[styles.tab, selectedTab === 'members' && styles.selectedTab]}>
-                            <Text style={styles.tabText}>Members</Text>
+                        <TouchableOpacity style={[styles.tab, selectedTab === 'members' && styles.selectedTab]} onPress={() => handleTabChange('members')}>
+                            <Text style={[styles.tabText, { color: themeColors.text }]}>{community.settings.members.title}</Text>
                         </TouchableOpacity>
                     </View>
                     <View style={[styles.section]}>
@@ -167,8 +239,8 @@ export default function NewRoles({ visible, onClose, setOverview }) {
                         <View style={styles.channelContainer}>
                             <View style={styles.channelContainer2}>
                                 <View style={styles.mainTitleContainer}>
-                                    <Text style={styles.mainTitle}>Create a new role</Text>
-                                    <Text style={styles.mainTitle2}>Give this role a unique name. You can always change this later.</Text>
+                                    <Text style={[styles.mainTitle, { color: themeColors.text }]}>{community.settings.members.create_role}</Text>
+                                    <Text style={[styles.mainTitle2, { color: themeColors.text }]}>{community.settings.members.role_comment}</Text>
                                 </View>
                                 
                                 <TextInput
@@ -193,70 +265,67 @@ export default function NewRoles({ visible, onClose, setOverview }) {
                                             setSelectedPermission(updatedPerms);
                                         }}
                                     />
-                                    <Text style={styles.permissionItem}>{perm.permission_type}</Text>
+                                    <Text style={[styles.permissionItem, { color: themeColors.text }]}>{perm.permission_type}</Text>
                                 </View>
                             ))}
                         </ScrollView>
                     )}
                     {step === 3 && (
                         <ScrollView>
-                            {selectedMembers.map((member, index) => (
-                                <View key={index} style={styles.checkboxContainer}>
-                                    <Switch
-                                        value={member.selected}
-                                        onValueChange={(newValue) => {
-                                            const updatedMembers = [...selectedMembers];
-                                            updatedMembers[index].selected = newValue;
-                                            setSelectedMembers(updatedMembers);
-                                        }}
-                                    />
-                                    <Text style={styles.memberItem}>{member.username}</Text>
-                                </View>
-                            ))}
-                        </ScrollView>
-                    )}
-                    
-                </View>
-            </View>
+                        <View style={styles.checkboxContainer}>
+                            <Switch
+                                value={allUsersSelected}
+                                onValueChange={toggleAllUsers}
+                            />
+                            <Text style={[styles.memberItem, { color: themeColors.text }]}>{community.settings.members.all_user}</Text>
+                        </View>
+                        {selectedMembers.map((member, index) => (
+                            <View key={index} style={styles.checkboxContainer}>
+                                <Switch
+                                    value={member.selected}
+                                    onValueChange={(newValue) => {
+                                        const updatedMembers = [...selectedMembers];
+                                        updatedMembers[index].selected = newValue;
+                                        setSelectedMembers(updatedMembers);
 
-            {/* Role Pop-up Modal */}
-            <Modal transparent visible={showRolePopup} animationType="fade">
-                <View style={styles.popupContainer}>
-                    <View style={styles.popupBox}>
-                        <TouchableOpacity style={styles.closeButton} onPress={() => setShowRolePopup(false)}>
-                            <Ionicons name="close" size={24} color="black" />
-                        </TouchableOpacity>
-                        <Text style={styles.popupText}>Please enter a Role</Text>
-                    </View>
+                                        // Check if all members are selected
+                                        const allSelected = updatedMembers.every(member => member.selected);
+                                        setAllUsersSelected(allSelected);
+
+                                        if (!newValue) {
+                                            setAllUsersSelected(false); // Unselect "All Users" if any user is unselected
+                                        }
+                                    }}
+                                />
+                                <Text style={[styles.memberItem, { color: themeColors.text }]}>{member.username}</Text>
+                            </View>
+                        ))}
+
+                    </ScrollView>
+                    )}
                 </View>
-            </Modal>
-    
-            {/* Permission Pop-up Modal */}
-            <Modal transparent visible={showPermissionPopup} animationType="fade">
-                <View style={styles.popupContainer}>
-                    <View style={styles.popupBox}>
-                        <TouchableOpacity style={styles.closeButton} onPress={() => setShowPermissionPopup(false)}>
-                            <Ionicons name="close" size={24} color="black" />
-                        </TouchableOpacity>
-                        <Text style={styles.popupText}>Please select at least one permission.</Text>
-                    </View>
-                </View>
-            </Modal>
-    
-            {/* Member Pop-up Modal */}
-            <Modal transparent visible={showMemberPopup} animationType="fade">
-                <View style={styles.popupContainer}>
-                    <View style={styles.popupBox}>
-                        <TouchableOpacity style={styles.closeButton} onPress={() => setShowMemberPopup(false)}>
-                            <Ionicons name="close" size={24} color="black" />
-                        </TouchableOpacity>
-                        <Text style={styles.popupText}>Please select at least one member.</Text>
-                    </View>
-                </View>
-            </Modal>
+                {errorPopupMessage && (
+                    <Modal style={{ backgroundColor: themeColors.background }} transparent visible={showRolePopup || showPermissionPopup || showMemberPopup} animationType="slide">
+                        <View style={styles.modalContainer2}>
+                            <View style={[styles.errorContent, { backgroundColor: themeColors.card }]}>
+                                <Text style={styles.errorText}>{errorPopupMessage}</Text>
+                                <TouchableOpacity onPress={() => {
+                                    setShowRolePopup(false);
+                                    setShowPermissionPopup(false);
+                                    setShowMemberPopup(false);
+                                    setErrorPopupMessage('');
+                                }}>
+                                    <Text style={styles.closeButton2}>{community.settings.members.close}</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </Modal>
+                )}
+            </View>
         </Modal>
     );
 }
+
 
 
 
@@ -266,6 +335,12 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#202020',
+    },
+    modalContainer2: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'transparent',
     },
     modalContent: {
         width: '100%',
@@ -300,7 +375,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
       },
       selectedTab: {
-        borderBottomColor: '#fff',
+        borderBottomColor: ThemeColors.text,
         borderBottomWidth: 1,
       },
       tabText: {
@@ -342,6 +417,7 @@ const styles = StyleSheet.create({
         borderRadius: 5,
         marginBottom: 10,
         paddingLeft: 10,
+        color: ThemeColors.text,
     },
     section: {
         overflow: 'hidden',
@@ -380,7 +456,7 @@ const styles = StyleSheet.create({
     spliter: {
         height: 0.3,
         width: '100%',
-        backgroundColor: 'rgba(169, 169, 169, 0.1)',
+        backgroundColor: ThemeColors.text,
     },
     backButtonContainer: {
         padding: 10,
@@ -390,17 +466,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 10,
         borderBottomWidth: 0.3,
-        borderBottomColor: '#fff'
+        borderBottomColor: ThemeColors.text,
     },
     permissionItem: {
         padding: 10,
         borderBottomWidth: 0.5,
-        borderBottomColor: '#fff',
+        borderBottomColor: ThemeColors.text,
         color: 'white',
     },
     memberItem: {
         padding: 10,
-        borderBottomColor: '#fff',
+        borderBottomColor: ThemeColors.text,
         color: 'white',
     },
     checkboxContainer: {
@@ -427,8 +503,24 @@ const styles = StyleSheet.create({
         top: 10,
         right: 10,
     },
+    closeButton2: {
+        fontSize: 16,
+        color: '#007bff',
+    },
     popupText: {
         fontSize: 16,
         textAlign: 'center',
+    },
+    errorContent: {
+        width: 300,
+        padding: 20,
+        backgroundColor: 'white',
+        borderRadius: 10,
+        alignItems: 'center',
+    },
+    errorText: {
+        fontSize: 16,
+        color: 'red',
+        marginBottom: 10,
     },
 });

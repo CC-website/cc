@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, Image, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome'; 
 import { Entypo, MaterialCommunityIcons, FontAwesome6 } from '@expo/vector-icons';
 import Overview from './overview';
@@ -9,12 +9,14 @@ import Members from '../members/members';
 import Roles from '../roles/roles';
 import BanedMembers from '../bans/bans';
 import Security from './security';
+import Invites from './invites';
 
 export default function ChannelSettings({ visible, onClose, selectedChannel }) {
 
 
     const [buttonOpacity, setButtonOpacity] = useState(1);
     const [isModalVisibleOverview, setModalVisibleOverview] = useState(false);
+    const [isModalVisibleInvite, setModalVisibleInvite] = useState(false);
     const [openEditChannelsModel, setOpenEditChannelsModel] = useState(false);
     const [openMembersModal, setOpenMembersModal] = useState(false);
     const [openRoles, setOpenRoles] = useState(false);
@@ -47,6 +49,14 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
         setModalVisibleOverview(false);
     };
 
+    const handleChannelInvite = () =>{
+      setModalVisibleInvite(true);
+    }
+
+  const handleCloseModalInvite = () => {
+      setModalVisibleInvite(false);
+  };
+
     const editChannels = () => {
       setOpenEditChannelsModel(true);
     }
@@ -66,6 +76,10 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
         // Implement logic to create a new main channel
         console.log('Creating new channel:', channelName);
         // You may want to send an API request to create the channel on the server
+      };
+
+      const handleCCBankPress = () => {
+        Alert.alert("CC Bank", "Coming up in 2026!");
       };
 
     
@@ -119,19 +133,6 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
                         <Text style={styles.settingsText}>Overview</Text>
                     </View>
                 </TouchableOpacity>
-                
-                <TouchableOpacity
-                style={{ ...styles.createButton1, opacity: buttonOpacity }}
-                onPress={() => console.log('Report Raid pressed')}
-                >
-                    <View style={styles.settingsBox}>
-                        <TouchableOpacity style={styles.createSubButton} >
-                            <MaterialCommunityIcons name="sword-cross" size={24} color="white" />
-                        </TouchableOpacity>
-
-                        <Text style={styles.settingsText}>Moderation</Text>
-                    </View>
-                </TouchableOpacity>
 
                 <TouchableOpacity
                 style={{ ...styles.createButton1, opacity: buttonOpacity }}
@@ -143,33 +144,6 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
                         </TouchableOpacity>
 
                         <Text style={styles.settingsText}>Channels</Text>
-                    </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                style={{ ...styles.createButton1, opacity: buttonOpacity }}
-                onPress={() => console.log('Report Raid pressed')}
-                >
-                    <View style={styles.settingsBox}>
-                        <TouchableOpacity style={styles.createSubButton}>
-                        <MaterialCommunityIcons name="whatsapp" size={24} color="white" />
-                        </TouchableOpacity>
-
-                        <Text style={styles.settingsText}>Intergrations</Text>
-                    </View>
-                </TouchableOpacity>
-
-                {/* Report Server */}
-                <TouchableOpacity
-                style={{ ...styles.createButton1, opacity: buttonOpacity }}
-                onPress={() => console.log('Report Server pressed')}
-                >
-                    <View style={styles.settingsBox}>
-                        <TouchableOpacity style={styles.createSubButton}>
-                        <MaterialCommunityIcons name="emoticon-excited-outline" size={24} color="white" />
-                        </TouchableOpacity>
-
-                        <Text style={styles.settingsText}>Emoji</Text>
                     </View>
                 </TouchableOpacity>
 
@@ -198,7 +172,7 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
                 {/* Channel Profile */}
                 <TouchableOpacity
                 style={{ ...styles.createButton3, opacity: buttonOpacity }}
-                onPress={() => console.log('Channel Profile pressed')}
+                onPress={handleCCBankPress}
                 >
                     <View style={styles.settingsBox}>
                         <TouchableOpacity style={styles.createSubButton}>
@@ -248,7 +222,7 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
                 {/* Report Server */}
                 <TouchableOpacity
                 style={{ ...styles.createButton1, opacity: buttonOpacity }}
-                onPress={() => console.log('Report Server pressed')}
+                onPress={() => handleChannelInvite()}
                 >
                     <View style={styles.settingsBox}>
                         <TouchableOpacity style={styles.createSubButton} >
@@ -283,6 +257,14 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
         setOverview={selectedChannel}
         // setChannels={setChannels}
       />
+
+      <Invites
+        visible={isModalVisibleInvite}
+        onClose={handleCloseModalInvite}
+        onCreateChannel={handleChannelInvite}
+        setOverview={selectedChannel}
+        // setChannels={setChannels}
+      />
       {/* Edit channels model */}
       <EditChannels
       visible={openEditChannelsModel}
@@ -295,12 +277,18 @@ export default function ChannelSettings({ visible, onClose, selectedChannel }) {
       onClose={closeMembersModal}
       onCreateChannel={membersModal}
       setOverview={selectedChannel}
+      channelId = {selectedChannel.id}
+      target_type = 'channel'
+      subchannelId = {null}
       /> 
 
       <Roles
       visible={openRoles}
       onClose={handelCloseRoles}
       setOverview={selectedChannel}
+      channelId={selectedChannel.id}
+      target_type = 'community'
+      subchannelId = {null}
       /> 
 
       <Security

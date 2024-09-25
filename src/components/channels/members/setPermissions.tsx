@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, Switch, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, ScrollView, Switch, Alert, useColorScheme, Image} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome'; 
 import { main_url } from '../../../constants/Urls';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ThemeColors } from '../../../constants/thems';
 
 export default function SetPermissions({ visible, onClose, permissionsData, setOverview, singleUser }) {
-  const [permissionType, setPermissionType] = useState('');
-  const [targetId, setTargetId] = useState('');
-  const [targetType, setTargetType] = useState('admin'); // Default to admin
-  const [removePermissions, setRemovePermissions] = useState({});
   const [action, setAction] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const scheme = useColorScheme();
+  const themeColors = ThemeColors[scheme];
   
 
   useEffect(() => {
@@ -20,127 +20,102 @@ export default function SetPermissions({ visible, onClose, permissionsData, setO
     permissionsData.forEach(permission => {
       initialPermissions[permission.id] = true;
     });
-    setRemovePermissions(initialPermissions);
   }, [permissionsData]);
 
-  const handleSetPermission = async () => {
-    // Logic to send data for permissions whose toggle buttons are set to false
-    const permissionsToRemove = [];
-    Object.entries(removePermissions).forEach(([id, value]) => {
-      if (!value) {
-        permissionsToRemove.push(id);
-      }
-    });
-    if (permissionsToRemove.length > 0) {
-      
-      try {
-        const formData = {
-            'permissions_to_remove': permissionsToRemove,
-            'user_id':singleUser.id,
-        };
-        console.log(formData);
-        
-        const url = `${main_url}/api/permissions/remove-user-role/`;
-        console.log('Permissions to remove:', url);
-        const response = await axios.put(url, formData);
-        
-        console.log('Permissions to remove:', url);
-        onClose();
-    } catch (error) {
-        console.log("An error occurred during update:", error);
-    }
-      
-    } else {
-      // Show alert if no permissions are set to false
-      Alert.alert('No Change', 'No change has been made.');
-    }
-  };
+  
 
-  const handleRemovePermission = (permissionId) => {
-    setRemovePermissions(prevState => ({
-      ...prevState,
-      [permissionId]: !prevState[permissionId] // Toggle the remove permission state
-    }));
-  };
 
   const handleConfirmation = async () => {
-    // Logic to handle the action confirmation
-    setShowConfirmation(false);
-    setAction(null);
-    // Perform the action based on the value of 'action' state
-    let formData = {}
-    if (action === 'band') {
-      formData = {
-        'channel_id': setOverview.id,
-        'user_id':singleUser.id,
-        'action': 'band',
-    };
-      // Handle 'band' action
-    } else if (action === 'kick') {
-      formData = {
-        'channel_id': setOverview.id,
-        'user_id':singleUser.id,
-        'action': 'kick',
-    };
-      // Handle 'kick' action
-    } else if (action === 'transfer') {
-      formData = {
-        'channel_id': setOverview.id,
-        'user_id':singleUser.id,
-        'action': 'transfer',
-    };
-      // Handle 'transfer' action
+    try {
+      // Retrieve token from AsyncStorage
+      const token = await AsyncStorage.getItem('userToken');
+      const jsonObject = JSON.parse(token);
+  
+      if (!token) {
+        console.log('No token found');
+        return;
+      }
+  
+      // Logic to handle the action confirmation
+      setShowConfirmation(false);
+      setAction(null);
+  
+      // Perform the action based on the value of 'action' state
+      let formData = {};
+      if (action === 'band') {
+        formData = {
+          'channel_id': setOverview.id,
+          'user_id': singleUser.id,
+          'action': 'band',
+        };
+        // Handle 'band' action
+      } else if (action === 'kick') {
+        formData = {
+          'channel_id': setOverview.id,
+          'user_id': singleUser.id,
+          'action': 'kick',
+        };
+        // Handle 'kick' action
+      } else if (action === 'transfer') {
+        formData = {
+          'channel_id': setOverview.id,
+          'user_id': singleUser.id,
+          'action': 'transfer',
+        };
+        // Handle 'transfer' action
+      } else if (action === 'restore') {
+        formData = {
+          'channel_id': setOverview.id,
+          'user_id': singleUser.id,
+          'action': 'restore',
+        };
+        // Handle 'restore' action
+      }
+  
+      const url = `${main_url}/api/permissions/perform-action-on-members/`;
+      console.log('Perform action on members:', url);
+  
+      const response = await axios.post(url, formData, {
+        headers: {
+          'Authorization': 'Bearer ' + jsonObject.access,
+        },
+      });
+  
+      console.log('Action performed:', response.data);
+  
+      onClose();
+    } catch (error) {
+      console.log('Error performing action:', error);
     }
-    const url = `${main_url}/api/permissions/perform-action-on-members/`;
-        console.log('Permissions to remove:', url);
-        const response = await axios.post(url, formData);
-        
-        console.log('Permissions to remove:', response.data);
-
-        onClose();
   };
   
+  
   return (
-    <Modal transparent visible={visible} animationType="slide">
-      <View style={styles.modalContainer}>
+    <Modal style={{ backgroundColor: themeColors.background }} transparent visible={visible} animationType="slide">
+      <View style={[styles.modalContainer, { backgroundColor: themeColors.background }]}>
         <View style={styles.backButtonContainer}>
           <TouchableOpacity style={styles.backButton} onPress={onClose}>
-            <Icon name="arrow-left" size={18} color="#fff" />
+            <Icon name="arrow-left" size={18} style={{ color: themeColors.text }} />
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>Set Permission</Text>
-          <TouchableOpacity style={styles.createButton} onPress={handleSetPermission}>
-            <Text style={styles.createButtonText}>Save</Text>
-          </TouchableOpacity>
+          <View style={styles.titleContainer}>
+            <Text style={[styles.modalTitle, { color: themeColors.text }]}>Set Permission</Text>
+          </View>
+          
         </View>
         <ScrollView
-          style={styles.modalContent}
+          style={[styles.modalContent, { backgroundColor: themeColors.background }]}
           showsVerticalScrollIndicator={false}
           showsHorizontalScrollIndicator={false}
         >
           <View style={styles.userInfoContainer}>
             <View style={styles.userpiccontainer}>
-              <Icon name="user" size={24} color="#fff" />
+            <Image
+                    style={styles.memberImage}
+                    source={{ uri: `${main_url}/${singleUser.profile_picture}` }}
+                  />
             </View>
-            <Text style={styles.username}>{singleUser.username}</Text>
+            <Text style={[styles.username, { color: themeColors.text }]}>{singleUser.username}</Text>
           </View>
-          {permissionsData.map((permission, index) => (
-            <View 
-              key={permission.id} 
-              style={[
-                styles.permissionContainer, 
-                index === 0 && styles.firstItem, 
-                index === permissionsData.length - 1 && styles.lastItem
-              ]}
-            >
-              <View style={styles.permissionInfoContainer}>
-                <Text style={styles.permissionType}>{permission.permission_type}</Text>
-                <Switch
-                  value={removePermissions[permission.id]}
-                  onValueChange={() => handleRemovePermission(permission.id)}
-                />
-              </View>
-            </View>
-          ))}
           <View style={styles.actionStyles}>
             <TouchableOpacity
               style={styles.userInfoContainer}
@@ -150,9 +125,9 @@ export default function SetPermissions({ visible, onClose, permissionsData, setO
               }}
             >
               <View style={styles.userpiccontainer}>
-                <MaterialCommunityIcons name="account-lock" size={20} color="#FFC0CB" />
+                <MaterialCommunityIcons name="account-lock" size={20} style={{ color: themeColors.text }} />
               </View>
-              <Text style={[styles.username,{color:'#FFC0CB'}]}>Ban {singleUser.username}</Text>
+              <Text style={[styles.username, { color: themeColors.text }]}>Ban {singleUser.username}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.userInfoContainer}
@@ -162,9 +137,9 @@ export default function SetPermissions({ visible, onClose, permissionsData, setO
               }}
             >
               <View style={styles.userpiccontainer}>
-                <MaterialCommunityIcons name="account-remove" size={20} color="#FFC0CB" />
+                <MaterialCommunityIcons name="account-remove" size={20} style={{ color: themeColors.text }} />
               </View>
-              <Text style={[styles.username,{color:'#FFC0CB'}]}>Kick {singleUser.username}</Text>
+              <Text style={[styles.username, { color: themeColors.text }]}>Kick {singleUser.username}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.userInfoContainer}
@@ -174,15 +149,15 @@ export default function SetPermissions({ visible, onClose, permissionsData, setO
               }}
             >
               <View style={styles.userpiccontainer}>
-                <MaterialCommunityIcons name="handshake" size={20} color="white" />
+                <MaterialCommunityIcons name="handshake" size={20} style={{ color: themeColors.text }} />
               </View>
-              <Text style={styles.username}>Transfer ownership to {singleUser.username}</Text>
+              <Text style={[styles.username, { color: themeColors.text }]}>Transfer ownership to {singleUser.username}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
         {showConfirmation && (
-          <View style={styles.confirmationContainer}>
-            <Text style={styles.confirmationText}>
+          <View style={[styles.confirmationContainer, { backgroundColor: themeColors.background }]}>
+            <Text style={[styles.confirmationText, { color: themeColors.text }]}>
               Are you sure you want to {action} {singleUser.username}?
             </Text>
             <View style={styles.confirmationButtons}>
@@ -190,7 +165,7 @@ export default function SetPermissions({ visible, onClose, permissionsData, setO
                 style={styles.confirmButton}
                 onPress={handleConfirmation}
               >
-                <Text style={styles.confirmButtonText}>Yes</Text>
+                <Text style={[styles.confirmButtonText, { color: themeColors.text }]}>Yes</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.cancelButton}
@@ -199,7 +174,7 @@ export default function SetPermissions({ visible, onClose, permissionsData, setO
                   setAction(null);
                 }}
               >
-                <Text style={styles.cancelButtonText}>No</Text>
+                <Text style={[styles.cancelButtonText, { color: themeColors.text }]}>No</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -244,7 +219,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderBottomWidth: 0.3,
-    borderBottomColor: '#fff',
+    borderBottomColor: ThemeColors.text,
+  },
+  titleContainer: {
+    width:'80%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: '5%'
   },
   createButton: {
     backgroundColor: '#36393f',
@@ -355,4 +336,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
+  memberImage: {
+    width: 40,  // set appropriate width
+    height: 40, // set appropriate height
+    resizeMode: 'cover',
+    borderRadius: 25, // appropriate radius for a circle
+  }
 });

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, ScrollView, StyleSheet, PanResponder, Image } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, TextInput, ScrollView, StyleSheet, PanResponder, Image, Dimensions, useColorScheme  } from 'react-native';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import NewChannelForm from '../../src/components/channels/settings/newChannelForm'; // Adjust the path based on your project structure
@@ -14,6 +14,7 @@ import { useTheme } from '../../src/constants/ThemeContext';
 import Colors from '../../src/constants/Colors';
 import Styles from '../../src/constants/Styles/channel';
 import Groupe from '../../src/components/channels/groups';
+import AllCommunities from '../../src/components/channels/settings/AllCommunities';
 
 const ChannelsScreen = () => {
   const [channels, setChannels] = useState([]);
@@ -27,28 +28,37 @@ const ChannelsScreen = () => {
   const [openby, setOpenby] = useState(0);
   const styles = Styles();
   const [showBottomBar, setShowBottomBar] = useState(true); // Example state in TabBottomLayout
+  const scheme = useColorScheme();
+  const [ModalVisibleCommunity, setModalVisibleCommunity] = useState(false);
 
+
+  const screenWidth = Dimensions.get('window').width;
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (evt, gestureState) => {
-        // Check for swipe from right to left
-        if (gestureState.dx < -50) { // Adjust the threshold as needed
+        if (gestureState.dx < -50) {
           console.log('Swiped from right to left');
+          setGroupModal(1); // Open the group screen
+        }
+
+        if (gestureState.dx > 50) {
+          console.log('Swiped from left to right');
+          setGroupModal(0); // Close the group screen
         }
       },
-      onPanResponderRelease: () => {
-        // Reset any state if needed
-      },
+      onPanResponderRelease: () => {},
     })
   ).current;
 
-  const getChannel = async ({ setShowBottomBar }, axiosInstance, mainUrl, setChannels) => {
+  const getChannel = async ( axiosInstance, mainUrl, setChannels) => {
     try {
       const token = await AsyncStorage.getItem('userToken');
       const jsonObject = JSON.parse(token);
+      console.log(jsonObject.access)
       if (token) {
+        console.log(`${mainUrl}/api/channels/`)
         const response = await axiosInstance.get(`${mainUrl}/api/channels/`, {
           headers: {
             'Authorization': 'Bearer ' + jsonObject.access
@@ -67,6 +77,7 @@ const ChannelsScreen = () => {
   useEffect(() => {
     getChannel(axios, main_url, setChannels);
   }, []);
+
 
   useEffect(() => {
     if (selectedChannel) {
@@ -140,14 +151,55 @@ const ChannelsScreen = () => {
     console.log('Creating new channel:', channelName);
   };
 
+
+  const handelCommunityView = () =>{
+    setModalVisibleCommunity(true)
+  }
+
+  const handelCommunityclose = () =>{
+    setModalVisibleCommunity(false)
+  }
+
+  const colors = {
+    light: {
+      background: '#f4f4f4',
+      card: '#ffffff',
+      text: '#000000',
+      button: '#007bff',
+      buttonText: '#ffffff',
+      inputBackground: '#ffffff',
+      inputText: '#000000',
+      inputBorder: '#cccccc',
+    },
+    dark: {
+      background: '#1A1A24',
+      card: '#242333',
+      text: '#ffffff',
+      button: '#0d0a1e',
+      buttonText: '#ffffff',
+      inputBackground: '#ffff',
+      inputText: '#ffffff',
+      inputBorder: '#ffff',
+    },
+  };
+
+  const themeColors = colors[scheme];
+
   return (
-    <View style={styles.container} {...panResponder.panHandlers}>
-      <View style={[styles.sectionContainer, { marginTop: 60, padding: 2, width: 80 }]}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]} {...panResponder.panHandlers}>
+      <View style={[styles.sectionContainer, { marginTop: 60, padding: 2, width: 80 }, { backgroundColor: themeColors.card }]}>
         <TouchableOpacity
           style={[styles.channelItem, styles.newChannelButton, { width: 70, marginLeft: 4 }]}
           onPress={handleNewMainChannel}
         >
           <Ionicons name="add-circle-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.channelItem, styles.newChannelButton, { width: 70, marginLeft: 4 }]}
+          onPress={handelCommunityView}
+        >
+          <Ionicons name="people-outline" size={24} color="#fff" />
         </TouchableOpacity>
         <FlatList
           data={channels}
@@ -169,16 +221,16 @@ const ChannelsScreen = () => {
           contentContainerStyle={[styles.sectionBase, { marginTop: 10, alignItems: 'center' }]}
         />
       </View>
-      <View style={[styles.section, { flex: 7, marginTop: 40, borderTopLeftRadius: 30 }]} >
+      <View style={[styles.section, { flex: 7, marginTop: 40, borderTopLeftRadius: 30 }, { backgroundColor: themeColors.card }]} >
         {selectedChannel ? (
           <View style={{ width: '100%', height: '100%' }}>
-            <View style={styles.sectionContainer1}>
+            <View style={[styles.sectionContainer1, { backgroundColor: themeColors.card }]}>
               <View style={{ display: "flex", flexDirection: 'row', justifyContent: 'space-between', paddingTop: 5, marginLeft: 20 }}>
                 {mainChannelName && (
-                  <Text style={styles.titleText}>{mainChannelName}</Text>
+                  <Text style={[styles.titleText, { color: themeColors.text }]}>{mainChannelName}</Text>
                 )}
                 <TouchableOpacity onPress={handleSettings}>
-                  <Ionicons name="ellipsis-horizontal" size={20} style={styles.dropDownbotton} />
+                  <Ionicons name="ellipsis-horizontal" size={20} style={[styles.dropDownbotton, { color: themeColors.text }]} />
                 </TouchableOpacity>
               </View>
               <View style={styles.searchContainer}>
@@ -186,9 +238,6 @@ const ChannelsScreen = () => {
                   <View style={styles.searchInput}>
                     <TextInput placeholder="Search" style={{ color: 'white' }} />
                   </View>
-                  <TouchableOpacity style={styles.searchButton} onPress={() => console.log('Create new group')}>
-                    <Ionicons name="search" size={24} color="#fff" />
-                  </TouchableOpacity>
                 </View>
                 <TouchableOpacity
                   style={[styles.newChannelButton, { width: '25%', backgroundColor: '#36393f', justifyContent: 'center' }]}
@@ -203,17 +252,17 @@ const ChannelsScreen = () => {
               >
                 <View style={styles.headerContainer}>
                   <TouchableOpacity style={styles.iconContainer}>
-                    <FontAwesome5 name="bars" size={15} style={styles.dropDownbotton} />
+                    <FontAwesome5 name="bars" size={15} style={[styles.dropDownbotton, { color: themeColors.text }]} />
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.iconContainer1}>
-                    <FontAwesome5 name="search" size={8} style={styles.dropDownbotton} />
+                    <FontAwesome5 name="search" size={8} style={[styles.dropDownbotton, { color: themeColors.text }]} />
                   </TouchableOpacity>
                 </View>
-                <Text style={[styles.dropDownbotton, { marginLeft: 10, fontSize: 15 }]}>Browse Channels</Text>
+                <Text style={[styles.dropDownbotton, { marginLeft: 10, fontSize: 15 }, { color: themeColors.text }]}>Browse Channels</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.spliter}></View>
-            <View style={styles.sectionContainer1}>
+            <View style={[styles.sectionContainer1, { backgroundColor: themeColors.card }]}>
               <FlatList
                 data={channels.find((c) => c.id === selectedChannel)?.subchannels || []}
                 keyExtractor={(item) => item.id}
@@ -285,7 +334,11 @@ const ChannelsScreen = () => {
       <Groupe
         visible={groupModal !== 0}
         onClose={handGroupMOdalClose}
-        setShowBottomBar={setShowBottomBar} // Pass setShowBottomBar here
+        setShowBottomBar={setShowBottomBar} 
+      />
+      <AllCommunities
+        visible={ModalVisibleCommunity}
+        onClose={handelCommunityclose}
       />
     </View>
   );

@@ -9,6 +9,7 @@ import Screen4 from '../../src/components/chat/massageTab/tab4';
 import Screen1 from '../../src/components/chat/massageTab/ta1';
 import Screen2 from '../../src/components/chat/massageTab/tab2';
 
+
 const Tab = createMaterialTopTabNavigator();
 
 export default function Index() {
@@ -30,16 +31,16 @@ export default function Index() {
   return (
     <View style={styles.container}>
       {/* Bar above the tabs */}
-      <View style={[styles.upperBar, {top:20}]}>
+      <View style={[styles.upperBar, { top: 20 }]}>
         <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="md-card" size={24} color="black" />
+          <Ionicons name="card" size={24} color="black" />
         </TouchableOpacity>
         <View style={{ flex: 1 }} />
         <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="md-camera" size={24} color="black" />
+          <Ionicons name="camera" size={24} color="black" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="md-search" size={24} color="black" />
+          <Ionicons name="search" size={24} color="black" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.iconButton}>
           <Ionicons name="ellipsis-vertical" size={24} color="black" />

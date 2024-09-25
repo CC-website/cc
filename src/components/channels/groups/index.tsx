@@ -1,77 +1,157 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, Animated } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import { Ionicons } from '@expo/vector-icons';
+import MessagingScreen from '../messaging/MessagingScreen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
+import { Ws_main_url } from '../../../constants/Urls';
 
 export default function Groupe({ visible, onClose, setShowBottomBar }) {
-  const [slideAnim] = useState(new Animated.Value(400));
+  const screenWidth = Dimensions.get('window').width;
+  // const [slideAnim] = useState(new Animated.Value(screenWidth));
   const [openby, setOpenby] = useState(0);
+  const [isGroup, setIsGroup] = useState(false);
+  const [processedData, setProcessedData] = useState([]);
+  const [userData, setUserData] = useState([]);
+  const [isOnline, setIsOnline] = useState(false);
+  const clientRef = useRef(null);
+  const roomName = '123';
+  const [messages, setMessages] = useState([]);
+  const slideAnim = useRef(new Animated.Value(Dimensions.get('window').width * 0.86)).current;
+  // const screenWidth = Dimensions.get('window').width;
 
   useEffect(() => {
-    console.log(visible)
     if (visible) {
-      setShowBottomBar(false); // Hide the bottom bar when the modal is visible
-      if (openby === 1) {
-        Animated.timing(slideAnim, {
-          toValue: 308,
-          duration: 300,
-          useNativeDriver: true,
-        }).start();
-      } else if (openby === 0) {
-        Animated.timing(slideAnim, {
-          toValue: 308,
-          duration: 300,
-          useNativeDriver: true,
-        }).start();
-      }
-    } else {
-      setShowBottomBar(true); // Show the bottom bar when the modal is hidden
       Animated.timing(slideAnim, {
-        toValue: 400,
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(slideAnim, {
+        toValue: screenWidth * 0.86,
         duration: 500,
         useNativeDriver: true,
       }).start(() => {
-        slideAnim.setValue(400);
+        slideAnim.setValue(screenWidth * 0.86);
       });
     }
   }, [visible]);
 
+  // Load user data from AsyncStorage
+  const loadUserData = async () => {
+    try {
+      const storedData = await AsyncStorage.getItem('UserData');
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+        setUserData(parsedData);
+      } else {
+        console.log("No user data found");
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  };
+
+  // Check online status
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsOnline(state.isConnected && state.isInternetReachable);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Connect to WebSocket server
+  useEffect(() => {
+    const connectWebSocket = () => {
+      const wsUrl = `ws:${Ws_main_url}/ws/chat/${roomName}/`;
+      clientRef.current = new WebSocket(wsUrl);
+
+      clientRef.current.onopen = () => {
+        console.log('WebSocket Client Connected');
+        if (isOnline && userData) {
+          clientRef.current.send(JSON.stringify({
+            text: "Online",
+            sender: userData.id,
+            status: "online",
+            timestamp: Date.now(),
+          }));
+        }
+      };
+
+      clientRef.current.onmessage = (message) => {
+        console.log('Received message:', message.data);
+        const newMessage = JSON.parse(message.data);
+        setMessages((prevMessages) => [...prevMessages, newMessage]);
+      };
+
+      clientRef.current.onerror = (error) => {
+        console.error('WebSocket Error:', error.message);
+      };
+
+      clientRef.current.onclose = (event) => {
+        console.log('WebSocket Client Closed:', event.code, event.reason);
+      };
+    };
+
+    if (userData) {
+      connectWebSocket();
+    }
+
+    return () => {
+      if (clientRef.current) {
+        clientRef.current.close();
+      }
+    };
+  }, [userData, roomName, isOnline]);
+
+  useEffect(() => {
+    loadUserData();
+  }, []);
 
   useEffect(() => {
     if (visible) {
-      setShowBottomBar(false); // Hide the bottom bar when the modal is visible
-      // Your existing animation code...
-    } else {
-      setShowBottomBar(true); // Show the bottom bar when the modal is hidden
-      // Your existing animation code...
-    }
-  }, [visible]);
-
-  const handleClose = () => {
-    Animated.timing(slideAnim, {
-      toValue: 400,
-      duration: 500,
-      useNativeDriver: true,
-    }).start(() => {
-      slideAnim.setValue(400);
-      setShowBottomBar(true); // Show the bottom bar when the modal is closed
+      setShowBottomBar(false);
+      
+      setShowBottomBar(true);
       Animated.timing(slideAnim, {
-        toValue: 308,
+        toValue: screenWidth * 0.86,
+        duration: 500,
+        useNativeDriver: true,
+      }).start(() => {
+        slideAnim.setValue(screenWidth * 0.86);
+      });
+    }
+  }, [visible, screenWidth * 0.86]);
+
+ 
+
+  const handelSetOpenby = () => {
+    if(openby === 0){
+      console.log("time")
+      Animated.timing(slideAnim, {
+        toValue: 0,
         duration: 300,
         useNativeDriver: true,
       }).start();
-
-      setOpenby(0);
-    });
-  };
-
-  const handelSetOpenby = () => {
-    setOpenby(1);
-    Animated.timing(slideAnim, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+      setOpenby(1);
+    }
+    if(openby === 1){
+      Animated.timing(slideAnim, {
+        toValue: screenWidth * 0.86,
+        duration: 500,
+        useNativeDriver: true,
+      }).start(() => {
+        slideAnim.setValue(screenWidth * 0.86);
+        setShowBottomBar(true);
+        setOpenby(0);
+      });
+    }
+    
   };
 
   return (
@@ -85,12 +165,14 @@ export default function Groupe({ visible, onClose, setShowBottomBar }) {
         <TouchableOpacity style={styles.backButton} onPress={() => handelSetOpenby()}>
           <Icon name="arrow-left" size={18} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.modalTitle}>Create New Group</Text>
-        <TouchableOpacity style={styles.createButton} onPress={() => handleClose()}>
+        <Text style={styles.modalTitle}>
+          {userData.username} {messages.length > 0 && messages[0].text}
+        </Text>
+        <TouchableOpacity style={styles.createButton} >
           <Ionicons name="add-circle-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
-      {/* Add your modal content here */}
+      <MessagingScreen roomName={roomName} isGroup={isGroup} userData={processedData} />
     </Animated.View>
   );
 }
@@ -140,5 +222,26 @@ const styles = StyleSheet.create({
     width: 60,
     height: 50,
     justifyContent: 'center',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  optionButton: {
+    padding: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    width: '45%',
+    alignItems: 'center',
+  },
+  selectedButton: {
+    backgroundColor: '#4CAF50',
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
 });

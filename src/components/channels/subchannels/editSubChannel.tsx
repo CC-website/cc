@@ -6,12 +6,29 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { main_url } from '../../../constants/Urls';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Roles from '../roles/roles';
+import Members from '../members/members';
 
-export default function EditSubChannel({ visible, onClose, setOverview }) {
+export default function EditSubChannel({ visible, onClose, setOverview, channelId}) {
   const [channelName, setChannelName] = useState('');
   const [channelDescription, setChannelDescription] = useState('');
   const [image, setImage] = useState(null);
+  const [openMembers, setOpenMembers] = useState(false)
+  const [openRoles, setOpenRoles] = useState(false)
 
+  const handelOpenMemgers = () =>{
+    setOpenMembers(true)
+  }
+  const handelcloseMembers =() => {
+    setOpenMembers(false)
+  }
+
+  const handelOpenRoles = () =>{
+    setOpenRoles(true)
+  }
+  const handelcloseRoles =() => {
+    setOpenRoles(false)
+  }
   const selectImage = async () => {
     // Request permissions if not granted
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -202,11 +219,39 @@ const handleDeleteChannel = async () => {
 
           {image && <Image source={{ uri: image }} style={styles.logoPreview} />}
 
+          <TouchableOpacity style={styles.membersButton} onPress={handelOpenMemgers}>
+            <Text style={{ color: 'white' }}>Members</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.membersButton} onPress={handelOpenRoles}>
+            <Text style={{ color: 'white' }}>Roles</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteChannel}>
             <Text style={styles.buttonText}>Delete Sub Channel</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+     
+
+    <Members
+          visible={openMembers}
+          onClose={handelcloseMembers}
+          onCreateChannel={setOverview}
+          setOverview={setOverview}
+          channelId = {channelId}
+          target_type = 'subchannel'
+          subchannelId = {0}
+      /> 
+      <Roles
+      visible={openRoles}
+      onClose={handelcloseRoles}
+      setOverview={setOverview}
+      channelId = {channelId}
+      target_type = 'sub-community'
+      subchannelId = {0}
+      /> 
     </Modal>
   );
 }
@@ -301,6 +346,15 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     alignItems: 'center',
     marginBottom: 10,
+  },
+  membersButton: {
+    backgroundColor: '#36393f',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 15, 
+    justifyContent: 'center',
   },
   buttonText: {
     color: '#fff',

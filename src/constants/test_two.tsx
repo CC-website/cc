@@ -21,42 +21,49 @@ const MessagingScreen = ({ roomName }) => {
             setIsConnected(state.isConnected);
         });
 
-        return () => {
-            unsubscribe();
-        };
-    }, []);
-
-    const loadUserData = async () => {
-        try {
-            const storedData = await AsyncStorage.getItem('UserData');
-            if (storedData) {
-                const parsedData = JSON.parse(storedData);
-                setUserData(parsedData);
-            } else {
-                console.log("No user data found");
+        const loadUserData = async () => {
+            try {
+                const storedData = await AsyncStorage.getItem('UserData');
+                if (storedData) {
+                    const parsedData = JSON.parse(storedData);
+                    setUserData(parsedData);
+                } else {
+                    console.log("No user data found");
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
             }
-        } catch (error) {
-            console.error('Error loading user data:', error);
-        }
-    };
-
-    useEffect(() => {
-        loadUserData();
-    }, []);
-
-    useEffect(() => {
-        // Connect to WebSocket server
-        const wsUrl = `ws:${Ws_main_url}/ws/chat/${roomName}/`;
-        clientRef.current = new WebSocket(wsUrl);
-
-        clientRef.current.onopen = () => {
-            console.log('WebSocket Client Connected');
         };
 
-        clientRef.current.onmessage = (message) => {
-            console.log('Received message:', message.data);
-            const newMessage = JSON.parse(message.data);
-            if(newMessage.status !== 2){
+        const loadMessages = async () => {
+            try {
+                const storedMessages = await AsyncStorage.getItem('messages');
+                if (storedMessages) {
+                    const parsedMessages = JSON.parse(storedMessages);
+                    if (Array.isArray(parsedMessages)) {
+                        setMessages(parsedMessages);
+                        console.log("Loaded messages", parsedMessages);
+                    } else {
+                        console.error('Stored messages are not an array:', parsedMessages);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load the messages:', error);
+            }
+        };
+
+        const connectWebSocket = () => {
+            const wsUrl = `ws:${Ws_main_url}/ws/chat/${roomName}/`;
+            clientRef.current = new WebSocket(wsUrl);
+
+            clientRef.current.onopen = () => {
+                console.log('WebSocket Client Connected');
+            };
+
+            clientRef.current.onmessage = (message) => {
+                console.log('Received message:', message.data);
+                const newMessage = JSON.parse(message.data);
+
                 if (newMessage.text === 'typing') {
                     setTypingMessages((prevMessages) => [...prevMessages, newMessage]);
                 } else if (newMessage.text === 'Online') {
@@ -64,91 +71,79 @@ const MessagingScreen = ({ roomName }) => {
                 } else if (newMessage.text === 'stoped typing') {
                     setTypingMessages([]);
                 } else {
-                    console.log("message received", newMessage);
-                    if(userData.id !== newMessage.sender){
+                    if (newMessage.status !== 3) {
+                        console.log("message received", newMessage);
+                        let user_id = 5;
+                        if (userData && userData.id) {
+                            user_id = userData.id;
+                        } else {
+                            console.error('User data is null or does not have an id property');
+                            return;
+                        }
+                        console.log("showing correct user id=====================", user_id);
+                        if (user_id !== newMessage.sender) {
+                            console.log("second send message", newMessage);
 
-                        saveMessage(newMessage);
-                    }else{
-                        
-                        newMessage.status = 2 
-                        clientRef.current.send(JSON.stringify(newMessage));
-                        
+                            newMessage.status = 3;
+                            console.log("this is Nigel test", newMessage);
+                            clientRef.current.send(JSON.stringify(newMessage));
+                            saveMessage(newMessage);
+                        } else {
+                            console.log("testing receptions");
+                        }
+
+                        setMessages((prevMessages) => [...prevMessages, newMessage]);
                     }
-                    
-                    setMessages((prevMessages) => [...prevMessages, newMessage]);
                 }
+            };
+
+            clientRef.current.onerror = (error) => {
+                console.error('WebSocket Error:', error.message);
+            };
+
+            clientRef.current.onclose = (event) => {
+                console.log('WebSocket Client Closed:', event.code, event.reason);
+            };
+        };
+
+        const saveMessage = async (message) => {
+            try {
+                const storedMessages = await AsyncStorage.getItem('messages');
+                let messagesArray = storedMessages ? JSON.parse(storedMessages) : [];
+
+                const existingMessageIndex = messagesArray.findIndex(msg => msg.timestamp === message.timestamp);
+
+                if (existingMessageIndex !== -1) {
+                    messagesArray[existingMessageIndex] = message;
+                    console.log('Message updated successfully');
+                } else {
+                    messagesArray.push(message);
+                    console.log('Message added successfully');
+                }
+
+                await AsyncStorage.setItem('messages', JSON.stringify(messagesArray));
+            } catch (error) {
+                console.error('Failed to save or update the message:', error);
             }
         };
 
-        clientRef.current.onerror = (error) => {
-            console.error('WebSocket Error:', error.message);
+        const scrollToBottom = () => {
+            if (flatListRef.current) {
+                flatListRef.current.scrollToEnd({ animated: true });
+            }
         };
 
-        clientRef.current.onclose = (event) => {
-            console.log('WebSocket Client Closed:', event.code, event.reason);
-        };
+        loadUserData();
+        loadMessages();
+        connectWebSocket();
 
         return () => {
-            // Clean up WebSocket connection on component unmount
             if (clientRef.current) {
                 clientRef.current.close();
             }
+            unsubscribe();
         };
     }, [roomName]);
-
-    useEffect(() => {
-        // Scroll to the last message when the messages array changes
-        if (flatListRef.current) {
-            flatListRef.current.scrollToEnd({ animated: true });
-        }
-    }, [messages]);
-
-    const saveMessage = async (message) => {
-        try {
-            const storedMessages = await AsyncStorage.getItem('messages');
-            let messagesArray = storedMessages ? JSON.parse(storedMessages) : [];
-    
-            // Check if a message with the same timestamp already exists
-            const existingMessageIndex = messagesArray.findIndex(msg => msg.timestamp === message.timestamp);
-    
-            if (existingMessageIndex !== -1) {
-                // Update the existing message
-                messagesArray[existingMessageIndex] = message;
-                console.log('Message updated successfully');
-            } else {
-                // Add the new message
-                messagesArray.push(message);
-                console.log('Message added successfully');
-            }
-    
-            // Save the updated array back to AsyncStorage
-            await AsyncStorage.setItem('messages', JSON.stringify(messagesArray));
-        } catch (error) {
-            console.error('Failed to save or update the message:', error);
-        }
-    };
-    
-
-    const loadMessages = async () => {
-        try {
-            const storedMessages = await AsyncStorage.getItem('messages');
-            if (storedMessages) {
-                const parsedMessages = JSON.parse(storedMessages);
-                if (Array.isArray(parsedMessages)) {
-                    setMessages(parsedMessages);
-                    console.log("Loaded messages", parsedMessages);
-                } else {
-                    console.error('Stored messages are not an array:', parsedMessages);
-                }
-            }
-        } catch (error) {
-            console.error('Failed to load the messages:', error);
-        }
-    };
-
-    useEffect(() => {
-        loadMessages();
-    }, []);
 
     const sendMessage = () => {
         if (inputText.trim() !== '') {
@@ -277,52 +272,52 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
     },
     messageContainer: {
         flexDirection: 'row',
         marginVertical: 4,
+        paddingHorizontal: 8,
     },
     messageBubble: {
         maxWidth: '80%',
-        borderRadius: 8,
         padding: 10,
+        borderRadius: 10,
     },
     messageText: {
         fontSize: 16,
     },
     timestampText: {
         fontSize: 12,
-        color: '#808080',
+        color: '#888',
         marginTop: 4,
-        textAlign: 'right',
+        alignSelf: 'flex-end',
     },
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
         borderTopWidth: 1,
         borderColor: '#ccc',
-        padding: 8,
-        backgroundColor: '#fff',
     },
     input: {
         flex: 1,
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
         borderWidth: 1,
         borderColor: '#ccc',
+        borderRadius: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
         marginRight: 8,
     },
     sendButtonText: {
-        color: '#007BFF',
+        color: '#007AFF',
         fontSize: 16,
+        fontWeight: 'bold',
     },
     typingText: {
+        color: '#808080',
         fontStyle: 'italic',
-        color: '#888',
-        marginBottom: 8,
+        marginVertical: 4,
     },
 });
 

@@ -1,21 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, StyleSheet, Image, ScrollView, TextInput, Switch } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, StyleSheet, Image, ScrollView, TextInput, Switch, useColorScheme } from 'react-native';
 import { FontAwesome, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Permissionspermission from './permissions';
 import PermissionsMembers from './permissionsMembers';
 import ConfirmationPopup from '../../../constants/ConfirmationPopup';
 import axios from 'axios';
 import { main_url } from '../../../constants/Urls';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { community } from '../../../constants/StaticData/en.json';
+import { ThemeColors } from '../../../constants/thems';
 
-export default function PermissionsRoles({ visible, onClose, setOverview, permissions, allPermission }) {
+export default function PermissionsRoles({ visible, onClose, setOverview, permissions, allPermission, target_type }) {
     
     const [openPermissionModal, setOpenPermissionModal] = useState(false);
     const [openMembersModal, setOpenMembersModal] = useState(false);
     const [roleName, setRoleName] = useState('');
+    const [OldroleName, setOldRoleName] = useState('');
     const [allowMention, setAllowMention] = useState(false);
     const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
     const [permissionType, setPermissionType] = useState('No Data');
     const [selectedMembers, setSelectedMembers] = useState([]);
+    const scheme = useColorScheme();
+    const themeColors = ThemeColors[scheme];
+
 
     useEffect(() => {
         console.log(permissions)
@@ -24,7 +31,7 @@ export default function PermissionsRoles({ visible, onClose, setOverview, permis
             const allUsers = permissions[0].all_members
             setPermissionType(permissionType);
             setRoleName(permissionType);
-
+            setOldRoleName(permissionType)
             setAllowMention(allUsers)
         }
         
@@ -39,7 +46,17 @@ export default function PermissionsRoles({ visible, onClose, setOverview, permis
         setOpenPermissionModal(false);
     }
     const handelopenMembersModal = () =>{
-        fetchUsers()
+        if(target_type === 'community'){
+            fetchUsers();
+        }else{
+            if(target_type === 'sub-community'){
+                fetchSubChannelUsers();
+            }else{
+                if(target_type === 'group'){
+                    fetchGroupUsers();
+                }
+            }
+        }
         setOpenMembersModal(true);
     }
     const handelCloseMembersModal = () =>{
@@ -47,6 +64,7 @@ export default function PermissionsRoles({ visible, onClose, setOverview, permis
     }
 
     const handleDeleteRole = () => {
+        deletePermission()
         setShowDeleteConfirmation(true);
     };
 
@@ -60,49 +78,144 @@ export default function PermissionsRoles({ visible, onClose, setOverview, permis
         setShowDeleteConfirmation(false);
     };
 
+
     const fetchUsers = async () => {
         try {
-            const response = await axios.get(`${main_url}/api/channels/${setOverview.id}/members/`);
-            setSelectedMembers(response.data);
+          const token = await AsyncStorage.getItem('userToken');
+          const jsonObject = JSON.parse(token);
+    
+          if (token) {
+            console.log(`${main_url}/api/channels/${setOverview.id}/members/`);
+            const response = await axios.get(`${main_url}/api/channels/${setOverview.id}/members/`, {
+              headers: {
+                'Authorization': 'Bearer ' + jsonObject.access
+              }
+            });
+            setSelectedMembers(response.data.members);
+          } else {
+            console.error('No token found');
+          }
         } catch (error) {
-            console.error('Error fetching users:', error);
+          console.log('Error fetching users 111111:', error);
+        }
+      };
+
+
+      const fetchSubChannelUsers = async () => {
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const jsonObject = JSON.parse(token);
+            if (jsonObject) {
+                const response = await axios.get(`${main_url}/api/subchannels/${setOverview.id}/members/`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + jsonObject.access
+                    }
+                });
+                 setSelectedMembers(response.data.members.map(member => ({ ...member, selected: false })));
+            } else {
+                console.log('No token found');
+            }
+        } catch (error) {
+            console.log('Error fetching users:', error);
         }
     };
+
+    const fetchGroupUsers = async () => {
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const jsonObject = JSON.parse(token);
+            if (jsonObject) {
+                const response = await axios.get(`${main_url}/api/groups/${setOverview.id}/members/`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + jsonObject.access
+                    }
+                });
+                setSelectedMembers(response.data.members.map(member => ({ ...member, selected: false })));
+            } else {
+                console.log('No token found');
+            }
+        } catch (error) {
+            console.log('Error fetching users:', error);
+        }
+    };
+
 
     const updateRole = async () => {
         try {
             const formData = {
                 'permission_type': roleName,
+                'old_permission_type': OldroleName,
                 'all_users': allowMention,
                 'permission_assignment_id':permissions[0].id,
+                'target_id': setOverview.id,
+                'target_type': target_type
             };
             console.log(formData);
             
             const url = `${main_url}/api/permissions/assign/`;
-            const response = await axios.put(url, formData);
-            
+            const token = await AsyncStorage.getItem('userToken');
+            const jsonObject = JSON.parse(token);
+        
+            if (token) {
+                const response = await axios.put(url, formData, {
+                    headers: {
+                      'Authorization': 'Bearer ' + jsonObject.access
+                    }
+                  });
+            }
             onClose();
         } catch (error) {
             console.log("An error occurred during update:", error);
         }
     };
+
+
+    const deletePermission = async () => {
+        try {
+            const formData = {
+                'permission_assignment_id': permissions[0].id, // This matches the backend delete requirement
+            };
+    
+            const url = `${main_url}/api/permissions/assign/`;
+            const token = await AsyncStorage.getItem('userToken');
+            const jsonObject = JSON.parse(token);
+    
+            if (token) {
+                // Perform the DELETE request with Authorization header
+                const response = await axios.delete(url, {
+                    headers: {
+                        'Authorization': 'Bearer ' + jsonObject.access,
+                        'Content-Type': 'application/json', // Set content type as JSON
+                    },
+                    data: formData, // Pass form data as 'data' when using DELETE method
+                });
+    
+                console.log(response.data); // Optional: Log the response data
+            }
+    
+            onClose();
+        } catch (error) {
+            console.log("An error occurred during deletion:", error);
+        }
+    };
+    
     
 
     return (
-        <Modal transparent visible={visible} animationType="slide">
-            <View style={styles.modalContainer}>
-                <View style={styles.modalContent}>
+        <Modal style={{ backgroundColor: themeColors.background }} transparent visible={visible} animationType="slide">
+            <View style={[styles.modalContainer, { backgroundColor: themeColors.background }]}>
+                <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
                     <View style={styles.backButtonContainer}>
                         <TouchableOpacity style={styles.backButton} onPress={onClose}>
-                            <Ionicons name="arrow-back" size={24} color="white" />
+                            <Ionicons name="arrow-back" size={24} style={{ color: themeColors.text }} />
                         </TouchableOpacity>
-                        <Text style={styles.modalTitle}>{setOverview.name}</Text>
+                        <Text style={[styles.modalTitle, { color: themeColors.text }]}>{setOverview.name}</Text>
                         <TouchableOpacity style={styles.createButton} onPress={updateRole}>
-                            <Text style={{color:'white'}}>Save</Text>
+                            <Text style={{ color: themeColors.text }}>{community.settings.members.save}</Text>
                         </TouchableOpacity>
                     </View>
-                    <View style={styles.Rolenamecontainer}>
-                        <Text style={styles.sectionSubTitle}>Role name</Text>
+                    <View style={[styles.Rolenamecontainer, { backgroundColor: themeColors.background }]}>
+                        <Text style={[styles.sectionSubTitle, { color: themeColors.text }]}>{community.settings.members.role_name}</Text>
                         <TextInput
                             style={styles.inputField}
                             placeholder="Role Name"
@@ -111,7 +224,7 @@ export default function PermissionsRoles({ visible, onClose, setOverview, permis
                         />
                     </View>
                     <View style={styles.allowMentionContainer}>
-                        <Text style={styles.sectionSubTitle}>Allow anyone to @mention this role</Text>
+                        <Text style={[styles.sectionSubTitle, { color: themeColors.text }]}>{community.settings.members.allow_anyone}</Text>
                         <Switch
                             value={allowMention}
                             onValueChange={value => setAllowMention(value)}
@@ -126,29 +239,23 @@ export default function PermissionsRoles({ visible, onClose, setOverview, permis
                     </View>
                     <View style={styles.bottomButtonsContainer}>
                         
-                        {permissions.length > 0 && !permissions[0].all_members ? (
-                            <TouchableOpacity style={styles.bottomButton} onPress={handelOpenPermissionModal}>
-                                <Text style={styles.bottomButtonText}>Permissions</Text>
-                                <MaterialCommunityIcons name="chevron-right" size={24} color="white" />
+                       
+                            <TouchableOpacity style={[styles.bottomButton1, { backgroundColor: themeColors.card }]} onPress={handelOpenPermissionModal}>
+                                <Text style={[styles.bottomButtonText, { color: themeColors.text }]}>{community.settings.members.permissions}</Text>
+                                <MaterialCommunityIcons name="chevron-right" size={24} style={{ color: themeColors.text }} />
                             </TouchableOpacity>
-                        ) : (
-                            <TouchableOpacity style={styles.bottomButton1} onPress={handelOpenPermissionModal}>
-                                <Text style={styles.bottomButtonText}>Permissions</Text>
-                                <MaterialCommunityIcons name="chevron-right" size={24} color="white" />
+                       
+                            <TouchableOpacity style={[styles.bottomButton2, { backgroundColor: themeColors.card }]} onPress={handelopenMembersModal}>
+                                <Text style={[styles.bottomButtonText, { color: themeColors.text }]}>{community.settings.members.members}</Text>
+                                <MaterialCommunityIcons name="chevron-right" size={24} style={{ color: themeColors.text }} />
                             </TouchableOpacity>
-                        )}
-                        {permissions.length > 0 && !permissions[0].all_members ? (
-                            <TouchableOpacity style={styles.bottomButton2} onPress={handelopenMembersModal}>
-                                <Text style={styles.bottomButtonText}>Members</Text>
-                                <MaterialCommunityIcons name="chevron-right" size={24} color="white" />
-                            </TouchableOpacity>
-                        ) : null}
+                       
 
                         
                     </View>
                     <View style={styles.deleteButtonContainer}>
                         <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteRole}>
-                            <Text style={styles.deleteButtonText}>Delete Role</Text>
+                            <Text style={styles.deleteButtonText}>{community.settings.members.delete_role}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -248,7 +355,7 @@ const styles = StyleSheet.create({
         width: '100%',
         flexDirection: 'row',
         borderBottomWidth: 0.3,
-        borderBottomColor: '#fff',
+        borderBottomColor: ThemeColors.text,
         justifyContent: 'space-between'
     },
     bottomButtonsContainer: {
@@ -265,7 +372,7 @@ const styles = StyleSheet.create({
         borderTopEndRadius: 5,
         borderTopLeftRadius: 5,
         borderBottomWidth: .4,
-        borderBottomColor: 'white',
+        borderBottomColor: ThemeColors.text,
         justifyContent: 'space-between',
     },
     bottomButton1: {
@@ -281,8 +388,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         backgroundColor: '#36393f',
         padding: 10,
-        borderBottomEndRadius: 5,
-        borderBottomLeftRadius: 5,
+        marginTop: 10,
+        borderRadius: 5,
         justifyContent: 'space-between',
     },
     bottomButtonText: {
