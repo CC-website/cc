@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Modal,
@@ -7,6 +7,8 @@ import {
   Text,
   ScrollView,
   Switch,
+  Alert,
+  RefreshControl,
 } from 'react-native';
 import { main_url } from '../../../constants/Urls';
 import Icon from 'react-native-vector-icons/FontAwesome'; // You can replace FontAwesome with your preferred icon library
@@ -14,6 +16,12 @@ import { Image } from 'react-native';
 import NewSubChannelForm from '../subchannels/newSubChannel';
 import NewGroupForm from '../groups/NewGroup';
 import ChannelSettings from './channelSettings';
+import SecurityAction from '../general_ations/security_action';
+import MessageCC from '../general_ations/messageCC';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import NewEvent from '../../events/newEvent';
+import ListEvents from '../../events/listEvents';
 
 export default function EmptyModal({ visible, onClose, channelInfo }) {
   const {
@@ -31,10 +39,47 @@ export default function EmptyModal({ visible, onClose, channelInfo }) {
   const [isModalVisible1, setModalVisible1] = useState(false);
   const [isModalVisible2, setModalVisible2] = useState(false);
   const [isModalVisible3, setModalVisible3] = useState(false);
+  const [securityActions, setSecurityActions] = useState(false);
+  const [messageCC, setMessageCC] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [newEvent, setNewEvent] = useState(false);
+  const [listEvent, setListEvent] = useState(false);
 
   const handleToggle = (setter) => {
     setter((prev) => !prev);
   };
+
+  const handleOpenListEvent = () => {
+    setListEvent(true);
+  };
+
+  const handleCloseListEvent = () =>{
+    setListEvent(false);
+  }
+
+  const handleOpenNewEvent = () => {
+    setNewEvent(true);
+  };
+
+  const handleCloseNewEvent = () =>{
+    setNewEvent(false);
+  }
+
+  const handleOpenMessageCC = () => {
+    setMessageCC(true);
+  };
+
+  const handleCloseMessageCC = () =>{
+    setMessageCC(false);
+  }
+
+  const handleOpenSecurityAction = () => {
+    setSecurityActions(true);
+  };
+
+  const handleCloseSecurityAction = () =>{
+    setSecurityActions(false);
+  }
 
   const handleNewSubChannel = () => {
     setModalVisible1(true);
@@ -67,11 +112,77 @@ export default function EmptyModal({ visible, onClose, channelInfo }) {
   };
 
 
-  const handleSwitchToggle = () => {
-    // Perform your action when the switch is toggled
-    console.log('Switch Toggled:', toggleSwitch);
-    // Add your custom logic here
+
+  const getModerationSettings = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const channelId = channelInfo?.id; // Ensure channelInfo is defined
+  
+      if (token) {
+        const jsonObject = JSON.parse(token); // Parse token if it's a JSON object
+        const response = await axios.get(`${main_url}/api/moderation-actions/${channelId}/`, {
+          headers: {
+            'Authorization': 'Bearer ' + jsonObject.access,
+          },
+        });
+  
+        const { mute_channel, direct_message, message_request } = response.data;
+  
+        // Set the state based on the backend response
+        setHideMutedChannel(mute_channel);
+        setAllowDirectMessages(direct_message);
+        setAllowMessageRequests(message_request);
+      } else {
+        console.log('No token found');
+      }
+    } catch (error) {
+      console.error('Error fetching moderation settings:', error);
+    }
   };
+
+ // Call fetchModerationSettings initially or when channelInfo changes
+ useEffect(() => {
+  getModerationSettings();
+}, [channelInfo]);
+
+
+
+  const handleSwitchToggle = async (value) => {
+    console.log('Switch Toggled:', value);
+
+    try {
+        const token = await AsyncStorage.getItem('userToken');
+        const jsonObject = JSON.parse(token);
+        const channelId = channelInfo.id;
+
+        if (token) {
+            const response = await axios.post(`${main_url}/api/moderation-actions/${channelId}/`, {
+                moderation: value,  // 'message_request', 'direct_message', 'mute_channel'
+            }, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + jsonObject.access,
+                },
+            });
+
+            console.log('Security actions updated:', response.data);
+            console.log('Success', 'Security actions have been updated!');
+        } else {
+            console.log('No token found');
+        }
+    } catch (error) {
+        console.log('Error saving security actions:', error);
+        Alert.alert('Error', 'Could not save security actions. Please try again.');
+    }
+};
+
+// Define the onRefresh function for pull-to-refresh
+const onRefresh = async () => {
+  setRefreshing(true);
+  await getModerationSettings(); // Reload moderation settings
+  setRefreshing(false);
+};
+
 
   return (
     <Modal transparent visible={visible} animationType="slide">
@@ -80,6 +191,9 @@ export default function EmptyModal({ visible, onClose, channelInfo }) {
           style={styles.modalContent}
           showsVerticalScrollIndicator={false}
           showsHorizontalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> // Adding RefreshControl
+          }
         >
           {/* Top Section */}
           <View style={styles.topSection}>
@@ -110,9 +224,9 @@ export default function EmptyModal({ visible, onClose, channelInfo }) {
               <Icon name="rocket" size={20} color="#fff" />
               <Text style={styles.iconLabel}>VIP</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton}>
-              <Icon name="user-plus" size={20} color="#fff" />
-              <Text style={styles.iconLabel}>Invite</Text>
+            <TouchableOpacity onPress={handleOpenListEvent} style={styles.iconButton}>
+            <Icon name="calendar" size={20} color="#fff" />
+              <Text style={styles.iconLabel}>Events</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconButton}>
               <Icon name="bell" size={20} color="#fff" />
@@ -151,7 +265,7 @@ export default function EmptyModal({ visible, onClose, channelInfo }) {
             {/* Create Event */}
             <TouchableOpacity
               style={{ ...styles.createButton2, opacity: buttonOpacity }}
-              onPress={() => console.log('Create Event pressed')}
+              onPress={handleOpenNewEvent}
             >
               <Text style={[styles.markAsReadText, { color: 'white' }]}>Create Event</Text>
             </TouchableOpacity>
@@ -171,7 +285,11 @@ export default function EmptyModal({ visible, onClose, channelInfo }) {
               <Text style={styles.toggleText}>Hide Muted Channel</Text>
               <Switch
                 value={hideMutedChannel}
-                onValueChange={() => handleToggle(setHideMutedChannel)}
+                onValueChange={() => {
+                  handleToggle(setHideMutedChannel);
+                  setToggleSwitch(!toggleSwitch);
+                  handleSwitchToggle("mute_channel");
+                }}
               />
             </View>
 
@@ -183,7 +301,7 @@ export default function EmptyModal({ visible, onClose, channelInfo }) {
                 onValueChange={() => {
                   handleToggle(setAllowDirectMessages);
                   setToggleSwitch(!toggleSwitch);
-                  handleSwitchToggle();
+                  handleSwitchToggle("direct_message");
                 }}
               />
             </View>
@@ -196,31 +314,23 @@ export default function EmptyModal({ visible, onClose, channelInfo }) {
                 onValueChange={() => {
                   handleToggle(setAllowMessageRequests);
                   setToggleSwitch(!toggleSwitch);
-                  handleSwitchToggle();
+                  handleSwitchToggle("message_request");
                 }}
               />
             </View>
 
-            {/* Report Raid */}
-            <TouchableOpacity
-              style={{ ...styles.createButton1, opacity: buttonOpacity }}
-              onPress={() => console.log('Report Raid pressed')}
-            >
-              <Text style={styles.markAsReadText}>Report Raid</Text>
-            </TouchableOpacity>
-
             {/* Report Server */}
             <TouchableOpacity
               style={{ ...styles.createButton1, opacity: buttonOpacity }}
-              onPress={() => console.log('Report Server pressed')}
+              onPress={handleOpenMessageCC}
             >
-              <Text style={styles.markAsReadText}>Report Server</Text>
+              <Text style={styles.markAsReadText}>Message CC</Text>
             </TouchableOpacity>
 
             {/* Security Action */}
             <TouchableOpacity
               style={{ ...styles.createButton2, opacity: buttonOpacity, marginBottom: 40 }}
-              onPress={() => console.log('Security Action pressed')}
+              onPress={handleOpenSecurityAction}
             >
               <Text style={[styles.markAsReadText, { color: '#4A0000'}]}>Security Action</Text>
             </TouchableOpacity>
@@ -254,6 +364,35 @@ export default function EmptyModal({ visible, onClose, channelInfo }) {
         onCreateChannel={handleCreateChannel}
         selectedChannel={channelInfo}
         // setChannels={setChannels}
+      />
+
+      {/* Security Action Modal */}
+      <SecurityAction
+        visible={securityActions}
+        onClose={handleCloseSecurityAction}
+        setOverview={channelInfo}
+        channelId = {channelInfo.id}
+        // setChannels={setChannels}
+      />
+
+      <MessageCC
+        visible={messageCC}
+        onClose={handleCloseMessageCC}
+        setOverview={channelInfo}
+        channelId = {channelInfo.id}
+        // setChannels={setChannels}
+      />
+
+      <NewEvent
+        visible={newEvent}
+        onClose={handleCloseNewEvent}
+        setOverview={channelInfo}
+      />
+
+      <ListEvents
+        visible={listEvent}
+        onClose={handleCloseListEvent}
+        setOverview={channelInfo}
       />
       </View>
     </Modal>
