@@ -31,6 +31,7 @@ export default function Blank({ visible, onClose, setOverview }) {
 }
 
 const styles = StyleSheet.create({
+   // ===========================================
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -87,4 +88,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
+  // ===========================================
 });

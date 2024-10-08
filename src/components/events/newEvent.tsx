@@ -11,28 +11,45 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 export default function NewEvent({ visible, onClose, setOverview, eventId = null}) {
   const [eventName, setEventName] = useState('');
-const [eventDescription, setEventDescription] = useState('');
-const [eventType, setEventType] = useState('unpaid');
-const [eventPrice, setEventPrice] = useState('');
-const [eventPaymentLink, setEventPaymentLink] = useState('');
-const [paymentMethod, setPaymentMethod] = useState('');
-const [joinChannel, setJoinChannel] = useState(false);
-const [requireForm, setRequireForm] = useState(false);
-const [requireAttendeeForm, setRequireAttendeeForm] = useState(false);
-const [image, setImage] = useState(null);
-const scheme = useColorScheme();
-const themeColors = ThemeColors[scheme];
-const [eventDate, setEventDate] = useState(new Date()); // Use a Date object
-const [showDatePicker, setShowDatePicker] = useState(false);
-// State for two different sets of form questions
-const [formQuestions, setFormQuestions] = useState([{ id: 1, question: '', type: 'mcq', options: [], answer: '', wordLimit: '' }]);
-const [formQuestions2, setFormQuestions2] = useState([{ id: 1, question: '', type: 'mcq', options: [], answer: '', wordLimit: '' }]);
+  const [eventDescription, setEventDescription] = useState('');
+  const [eventType, setEventType] = useState('free');
+  const [eventPrice, setEventPrice] = useState('');
+  const [eventPaymentLink, setEventPaymentLink] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [joinChannel, setJoinChannel] = useState(false);
+  const [requireForm, setRequireForm] = useState(false);
+  const [requireAttendeeForm, setRequireAttendeeForm] = useState(false);
+  const [image, setImage] = useState(null);
+  const scheme = useColorScheme();
+  const themeColors = ThemeColors[scheme];
+  const [eventDate, setEventDate] = useState(new Date()); // Use a Date object
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  // State for two different sets of form questions
+  const [formQuestions, setFormQuestions] = useState([{ id: 1, question: '', type: 'mcq', options: [], answer: '', wordLimit: '' }]);
+  const [formQuestions2, setFormQuestions2] = useState([{ id: 1, question: '', type: 'mcq', options: [], answer: '', wordLimit: '' }]);
 
-const onChange = (event, selectedDate) => {
-  const currentDate = selectedDate || eventDate;
-  setShowDatePicker(Platform.OS === 'ios'); // If iOS, keep the picker open
-  setEventDate(currentDate); // Update the event date
-};
+
+  
+  
+
+  // Function to handle date change
+  const onChangeDate = (event, selectedDate) => {
+    const currentDate = selectedDate || eventDate;
+    setShowDatePicker(false); // Close the date picker
+    setEventDate(currentDate); // Update the event date
+    // Show the time picker after date selection
+    setTimeout(() => {
+      setShowDatePicker({ mode: 'time' });
+    }, 200); // Small delay to smooth transition
+  };
+
+  // Function to handle time change
+  const onChangeTime = (event, selectedTime) => {
+    const currentTime = selectedTime || eventDate;
+    setShowDatePicker(false); // Close the time picker
+    setEventDate(currentTime); // Update the event time
+  };
 
 useEffect(() => {
   const fetchEvents = async () => {
@@ -52,7 +69,7 @@ useEffect(() => {
 
       setEventName(data.name || '');
       setEventDescription(data.description || '');
-      setEventType(data.type || 'unpaid'); // Default to 'unpaid'
+      setEventType(data.type || 'free'); // Default to 'unpaid'
       setEventPaymentLink(data.eventPaymentLink || '');
       setPaymentMethod(data.paymentMethod || '');
       setJoinChannel(data.allowJoinChannel || false);
@@ -239,6 +256,11 @@ const handleSaveEvent = async () => {
     if (response && response.status === 200) {
       Alert.alert('Success', 'Event saved successfully.');
       onClose();
+    }else{
+      if (response && response.status === 201) {
+        Alert.alert('Success', 'Event created successfully.');
+        onClose();
+      }
     }
   } catch (error) {
     console.error(error);
@@ -280,24 +302,27 @@ const handleSaveEvent = async () => {
             multiline
           />
 
-          <View>
-            <Text style={styles.label}>Event Date</Text>
+            <View>
+                  <Text style={styles.label}>Event Date and Time</Text>
 
-            {/* Display a button to show the date picker */}
-            <Button onPress={() => setShowDatePicker(true)} title="Select Event Date" />
+                  {/* Button to trigger both date and time pickers */}
+                  <Button onPress={() => setShowDatePicker({ mode: 'date' })} title="Select Event Date and Time" />
 
-            {/* Display the selected date in a readable format */}
-            <Text style={styles.input}>{eventDate.toISOString().split('T')[0]}</Text>
+                  {/* Display the selected date and time */}
+                  <Text style={styles.input}>
+                    {eventDate.toLocaleDateString()} {eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
 
-            {showDatePicker && (
-              <DateTimePicker
-                value={eventDate}
-                mode="date"
-                display="default"
-                onChange={onChange}
-              />
-            )}
-          </View>
+                  {/* Show DateTimePicker (first date, then time) */}
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={eventDate}
+                      mode={showDatePicker.mode}
+                      display="default"
+                      onChange={showDatePicker.mode === 'date' ? onChangeDate : onChangeTime} // Handle date first, then time
+                    />
+                  )}
+            </View>
 
           <TouchableOpacity onPress={pickImage} style={styles.imagePicker}>
             <Text style={styles.imagePickerText}>Pick an Event Image</Text>
@@ -309,7 +334,7 @@ const handleSaveEvent = async () => {
 
           <Text style={styles.label}>Event Type</Text>
           <Picker selectedValue={eventType} onValueChange={setEventType} style={styles.picker}>
-            <Picker.Item label="Unpaid" value="unpaid" />
+            <Picker.Item label="Free" value="free" />
             <Picker.Item label="Paid" value="paid" />
           </Picker>
 
