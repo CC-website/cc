@@ -16,6 +16,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { main_url } from '../../constants/Urls';
 import NewEvent from './newEvent';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 const FirstTab = ({ visible, onClose, setOverview, navigation }) => {
   const [events, setEvents] = useState([]);
@@ -82,6 +83,46 @@ const FirstTab = ({ visible, onClose, setOverview, navigation }) => {
     setRefreshing(true);
     await fetchEvents(); 
   };
+
+  const updateBroadcastStatus = async (contentType, contentId) => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const jsonObject = JSON.parse(token);
+      
+      const response = await axios.post(
+        `${main_url}/api/broadcasts/close/`, // Endpoint to close or open the broadcast
+        {
+          content_type: contentType,  // Pass the content type
+          content_id: contentId,      // Pass the content ID
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${jsonObject.access}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      // Assuming the response includes the updated broadcast status
+      const updatedBroadcast = response.data.broadcast; // Extract the updated broadcast status from the response
+
+      Alert.alert('Success', response.data.detail);
+
+      // Update the event with the new broadcast value
+      setEvents((prevEvents) =>
+        prevEvents.map((event) =>
+          event.id === contentId ? { ...event, broadcast: updatedBroadcast } : event
+        )
+      );
+
+      // Optionally, close the modal or handle UI changes
+      setStatusModalVisible(false); 
+    } catch (error) {
+      console.error("Broadcast update failed: ", error);
+      Alert.alert('Error', 'Failed to update broadcast status.');
+    }
+  };
+
 
   const updateEventStatus = async (eventId, newStatus) => {
     try {
@@ -155,6 +196,12 @@ const FirstTab = ({ visible, onClose, setOverview, navigation }) => {
                 <View key={item.id.toString()} style={styles.eventItem}>
                   <View  style={styles.eventActionscontainer}>
                     <View style={styles.eventActions}>
+                      {item.broadcast?(<>
+                        <TouchableOpacity>
+                          <FontAwesome name="tv" size={24} color='green' style={styles.actionIcon} />
+                        </TouchableOpacity>
+                      
+                      </>):null}
                       <TouchableOpacity onPress={() => handleOpenNewEvent(item.id)}
                       >
                         <Icon name="edit" size={20} color="#fff" style={styles.actionIcon} />
@@ -223,6 +270,12 @@ const FirstTab = ({ visible, onClose, setOverview, navigation }) => {
                   <Text style={styles.statusText}>{status.label}</Text>
                 </TouchableOpacity>
               ))}
+              <TouchableOpacity
+                style={styles.broadcask}
+                onPress={() => updateBroadcastStatus("event", selectedEvent.id)}
+              >
+                <Text style={styles.cancelText}>Open or Close Broadcast</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={() => setStatusModalVisible(false)}
@@ -366,6 +419,12 @@ const styles = StyleSheet.create({
   cancelButton: {
     marginTop: 10,
     backgroundColor: '#dc3545',
+    padding: 10,
+    borderRadius: 5,
+  },
+  broadcask: {
+    marginTop: 10,
+    backgroundColor: 'green',
     padding: 10,
     borderRadius: 5,
   },
